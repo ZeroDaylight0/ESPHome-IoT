@@ -36,8 +36,6 @@ clear observability through MQTT, logs and web/API endpoints.
 │   ├── camera/
 │   ├── networking/
 │   └── assets/
-├── tools/
-│   └── publish-portfolio.ps1
 ├── README.md
 ├── .gitignore
 └── secrets.example.yaml
