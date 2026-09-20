@@ -1,0 +1,230 @@
+# ESP32 + ADS1115 + ACS115 4S Р±РµР· Wi-Fi
+
+substitutions:
+  device_name: esp32-ads1115-4cell
+  friendly_name: "ADS1115 ACS115 4S Meter"
+
+  cell1_divider: "2.0"
+  cell2_divider: "3.0"
+  cell3_divider: "4.5"
+  cell4_divider: "6.0"
+  acs_zero_voltage: "1.650"
+  acs_volts_per_amp: "0.185"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+ethernet:
+  type: W5500
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+  cs_pin: GPIO5
+  manual_ip:
+    static_ip: 192.168.249.32
+    gateway: 192.168.249.1
+    subnet: 255.255.255.0
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  frequency: 100kHz
+
+mqtt:
+  broker: !secret mqtt_host_legacy
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: esphome/ads1115_acs115_4cell
+
+ads1115:
+  - address: 0x48
+    id: ads_cells
+
+font:
+  - file: "gfonts://Roboto Condensed"
+    id: font_label
+    size: 9
+
+  - file: "gfonts://Roboto Condensed"
+    id: font_value
+    size: 15
+
+  - file: "gfonts://Roboto Condensed"
+    id: font_small
+    size: 10
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    rotation: 180
+    address: 0x3C
+    id: oled_display
+    update_interval: never
+
+    pages:
+      - id: page_cells
+        lambda: |-
+          it.print(4, 0, id(font_label), TextAlign::LEFT, "C1");
+          it.printf(4, 10, id(font_value), TextAlign::LEFT, "%.3fV", id(cell1_v).state);
+
+          it.print(4, 31, id(font_label), TextAlign::LEFT, "C2");
+          it.printf(4, 41, id(font_value), TextAlign::LEFT, "%.3fV", id(cell2_v).state);
+
+          it.print(68, 0, id(font_label), TextAlign::LEFT, "C3");
+          it.printf(68, 10, id(font_value), TextAlign::LEFT, "%.3fV", id(cell3_v).state);
+
+          it.print(68, 31, id(font_label), TextAlign::LEFT, "C4");
+          it.printf(68, 41, id(font_value), TextAlign::LEFT, "%.3fV", id(cell4_v).state);
+
+      - id: page_total
+        lambda: |-
+          it.print(0, 0, id(font_small), TextAlign::LEFT, "TOTAL");
+          it.printf(0, 14, id(font_value), TextAlign::LEFT, "%.3f V", id(total_v).state);
+          it.print(0, 36, id(font_small), TextAlign::LEFT, "CURRENT");
+          it.printf(0, 48, id(font_value), TextAlign::LEFT, "%.3f A", id(battery_current).state);
+
+interval:
+  - interval: 3s
+    then:
+      - display.page.show_next: oled_display
+      - component.update: oled_display
+
+sensor:
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A0_GND"
+    gain: 4.096
+    update_interval: 2s
+    id: ads_tap1
+    name: "tap1_voltage_raw"
+    unit_of_measurement: "V"
+    accuracy_decimals: 4
+    internal: true
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A1_GND"
+    gain: 4.096
+    update_interval: 2s
+    id: ads_tap2
+    name: "tap2_voltage_raw"
+    unit_of_measurement: "V"
+    accuracy_decimals: 4
+    internal: true
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A2_GND"
+    gain: 4.096
+    update_interval: 2s
+    id: ads_tap3
+    name: "tap3_voltage_raw"
+    unit_of_measurement: "V"
+    accuracy_decimals: 4
+    internal: true
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A3_GND"
+    gain: 4.096
+    update_interval: 2s
+    id: ads_tap4
+    name: "tap4_voltage_raw"
+    unit_of_measurement: "V"
+    accuracy_decimals: 4
+    internal: true
+
+  - platform: adc
+    pin: GPIO34
+    id: acs_voltage
+    name: "acs_voltage_raw"
+    attenuation: 12db
+    update_interval: 2s
+    accuracy_decimals: 4
+    internal: true
+
+  - platform: template
+    name: "cell1_voltage"
+    id: cell1_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: |-
+      return id(ads_tap1).state * ${cell1_divider};
+    update_interval: 2s
+
+  - platform: template
+    name: "cell2_voltage"
+    id: cell2_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: |-
+      const float tap1 = id(ads_tap1).state * ${cell1_divider};
+      const float tap2 = id(ads_tap2).state * ${cell2_divider};
+      return tap2 - tap1;
+    update_interval: 2s
+
+  - platform: template
+    name: "cell3_voltage"
+    id: cell3_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: |-
+      const float tap2 = id(ads_tap2).state * ${cell2_divider};
+      const float tap3 = id(ads_tap3).state * ${cell3_divider};
+      return tap3 - tap2;
+    update_interval: 2s
+
+  - platform: template
+    name: "cell4_voltage"
+    id: cell4_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: |-
+      const float tap3 = id(ads_tap3).state * ${cell3_divider};
+      const float tap4 = id(ads_tap4).state * ${cell4_divider};
+      return tap4 - tap3;
+    update_interval: 2s
+
+  - platform: template
+    name: "total_voltage"
+    id: total_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery-high"
+    lambda: |-
+      return id(ads_tap4).state * ${cell4_divider};
+    update_interval: 2s
+
+  - platform: template
+    name: "battery_current"
+    id: battery_current
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    icon: "mdi:current-dc"
+    lambda: |-
+      return (id(acs_voltage).state - ${acs_zero_voltage}) / ${acs_volts_per_amp};
+    update_interval: 2s
+
+web_server:
+  port: 80
+
+api:
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password

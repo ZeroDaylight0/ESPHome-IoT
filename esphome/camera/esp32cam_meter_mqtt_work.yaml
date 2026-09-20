@@ -1,0 +1,214 @@
+# ESP32-CAM СЃС‡С‘С‚С‡РёРє СЃ MQTT
+
+substitutions:
+  device_name: "esp32cam-meter"
+  friendly_name: "meter ESP32-CAM"
+  capture_interval: "120s"
+  flash_duration: "2s"
+  flash_timeout: "2s"
+  jpeg_quality: "16"
+  frame_size: "640X480"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - logger.log: "РїРµСЂРІС‹Р№ СЃРЅРёРјРѕРє С‡РµСЂРµР· 5 СЃРµРєСѓРЅРґ"
+      - delay: 5s
+      - script.execute: take_photo
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${device_name}-fallback"
+    password: !secret fallback_ap_password_esp32meter
+
+captive_portal:
+
+logger:
+  level: INFO
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password
+
+api:
+
+web_server:
+  port: 80
+  version: 3
+
+mqtt:
+  id: mqtt_client
+  broker: !secret mqtt_host
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  client_id: ${device_name}
+
+  birth_message:
+    topic: meter/status
+    payload: online
+  will_message:
+    topic: meter/status
+    payload: offline
+  shutdown_message:
+    topic: meter/status
+    payload: offline
+
+  on_connect:
+    then:
+      - logger.log: "MQTT on"
+      - mqtt.publish:
+          id: mqtt_client
+          topic: meter/status
+          payload: mqtt_connected
+
+  on_disconnect:
+    then:
+      - logger.log: "MQTT off"
+
+  on_message:
+    - topic: meter/cmd
+      payload: "capture"
+      then:
+        - logger.log: "РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° СЃРЅРёРјРєР°"
+        - script.execute: take_photo
+
+esp32_camera:
+  id: my_camera
+  name: "${friendly_name} Camera"
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+
+  resolution: ${frame_size}
+  jpeg_quality: ${jpeg_quality}
+  brightness: 1
+  contrast: 1
+  saturation: -1
+  special_effect: NONE
+  vertical_flip: true
+  horizontal_mirror: true
+  wb_mode: OFFICE
+  aec_mode: AUTO
+  aec2: false
+  ae_level: 0
+  agc_mode: AUTO
+  agc_gain_ceiling: 32X
+  aec_value: 600
+  idle_framerate: 0 fps
+  on_image:
+    - script.stop: flash_failsafe_off
+    - light.turn_off:
+        id: flash_light
+    - logger.log: "РљР°РґСЂ РїРѕР»СѓС‡РµРЅ, РІСЃРїС‹С€РєР° РІС‹РєР»СЋС‡РµРЅР°"
+    - lambda: |-
+        if (!id(mqtt_client).is_connected()) {
+          ESP_LOGE("meter", "MQTT РЅРµ РїРѕРґРєР»СЋС‡РµРЅ, С„РѕС‚Рѕ РЅРµ Р±СѓРґРµС‚ РѕС‚РїСЂР°РІР»РµРЅРѕ");
+          id(mqtt_client).publish("meter/status", "mqtt_not_connected");
+          return;
+        }
+
+        auto encoded = esphome::base64_encode(image.data, image.length);
+        if (id(mqtt_client).publish("meter/image", encoded)) {
+          ESP_LOGI("meter", "Р¤РѕС‚Рѕ РѕС‚РїСЂР°РІР»РµРЅРѕ (%u Р±Р°Р№С‚ JPEG, %u Р±Р°Р№С‚ base64)",
+                   static_cast<unsigned int>(image.length),
+                   static_cast<unsigned int>(encoded.size()));
+          id(mqtt_client).publish("meter/status", "photo_sent");
+        } else {
+          ESP_LOGE("meter", "MQTT publish РІРµСЂРЅСѓР» false");
+          id(mqtt_client).publish("meter/status", "publish_error");
+        }
+
+esp32_camera_web_server:
+  - port: 8080
+    mode: snapshot
+  - port: 8081
+    mode: stream
+
+output:
+  - platform: ledc
+    pin: GPIO4
+    id: flash_output
+    frequency: 1000Hz
+
+light:
+  - platform: monochromatic
+    output: flash_output
+    id: flash_light
+    name: "${friendly_name} Flash"
+    default_transition_length: 0s
+
+sensor:
+  - platform: wifi_signal
+    name: "${friendly_name} WiFi Signal"
+    update_interval: 60s
+
+  - platform: template
+    name: "${friendly_name} Last Value"
+    id: meter_last_value
+    unit_of_measurement: "mВі"
+    accuracy_decimals: 3
+    icon: mdi:counter
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "${friendly_name} IP"
+
+binary_sensor:
+  - platform: status
+    name: "${friendly_name} Status"
+
+button:
+  - platform: template
+    name: "${friendly_name} Manual Capture"
+    on_press:
+      - logger.log: "Р СѓС‡РЅРѕР№ СЃРЅРёРјРѕРє РёР· РІРµР±-РёРЅС‚РµСЂС„РµР№СЃР°"
+      - script.execute: take_photo
+
+script:
+  - id: flash_failsafe_off
+    mode: restart
+    then:
+      - delay: ${flash_timeout}
+      - light.turn_off:
+          id: flash_light
+      - logger.log: "Р’СЃРїС‹С€РєР° РІС‹РєР»СЋС‡РµРЅР° РїРѕ С‚Р°Р№РјР°СѓС‚Сѓ"
+
+  - id: take_photo
+    mode: single
+    then:
+      - logger.log: "Р’РєР»СЋС‡Р°РµРј РІСЃРїС‹С€РєСѓ Рё Р·Р°РїСЂР°С€РёРІР°РµРј РєР°РґСЂ"
+      - script.stop: flash_failsafe_off
+      - light.turn_on:
+          id: flash_light
+          brightness: 100%
+      - delay: ${flash_duration}
+      - logger.log: "Р—Р°РїСЂР°С€РёРІР°РµРј РєР°РґСЂ"
+      - lambda: |-
+          id(my_camera).request_image(esphome::esp32_camera::CameraRequester::API_REQUESTER);
+      - script.execute: flash_failsafe_off
+      - logger.log: "РЎРЅРёРјРѕРє Р·Р°РїСЂРѕС€РµРЅ"
+
+interval:
+  - interval: ${capture_interval}
+    then:
+      - script.execute: take_photo

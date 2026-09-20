@@ -1,0 +1,188 @@
+substitutions:
+  device_name: esp32-ads1115-4cell-wifi
+  friendly_name: "BMS Mon 4S ADS1115"
+  # РљРћР­Р¤Р¤РР¦РР•РќРўР« Р”Р•Р›РРўР•Р›Р•Р™ (РЅР°СЃС‚СЂРѕР№ РёС… РїРѕРґ СЃРІРѕРё СЂРµР·РёСЃС‚РѕСЂС‹)
+  cell1_divider: "2.0"
+  cell2_divider: "3.0"
+  cell3_divider: "4.5"
+  cell4_divider: "6.0"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "ads1115-4s-fallback"
+    password: !secret fallback_ap_password_esp32meter
+
+captive_portal:
+
+i2c:
+  sda: GPIO19
+  scl: GPIO22
+  scan: true
+  frequency: 100kHz
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: esphome/ads1115_4cell
+
+ads1115:
+  - address: 0x48
+    id: ads_cells
+
+font:
+  - file: "gfonts://Roboto Condensed"
+    id: font_label
+    size: 10
+  - file: "gfonts://Roboto Condensed"
+    id: font_value
+    size: 16
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    rotation: 180
+    address: 0x3C
+    id: oled_display
+    update_interval: 1s
+    lambda: |-
+      // РЎРµС‚РєР°
+      it.line(64, 0, 64, 64);
+      it.line(0, 32, 128, 32);
+
+      // РЇС‡РµР№РєР° 1
+      it.printf(4, 2, id(font_label), "C1");
+      it.printf(4, 14, id(font_value), "%.2fV", id(cell1_v).state);
+
+      // РЇС‡РµР№РєР° 2
+      it.printf(68, 2, id(font_label), "C2");
+      it.printf(68, 14, id(font_value), "%.2fV", id(cell2_v).state);
+
+      // РЇС‡РµР№РєР° 3
+      it.printf(4, 34, id(font_label), "C3");
+      it.printf(4, 46, id(font_value), "%.2fV", id(cell3_v).state);
+
+      // РЇС‡РµР№РєР° 4
+      it.printf(68, 34, id(font_label), "C4");
+      it.printf(68, 46, id(font_value), "%.2fV", id(cell4_v).state);
+
+sensor:
+  # РЎС‹СЂС‹Рµ Р·Р°РјРµСЂС‹ СЃ РІС…РѕРґРѕРІ A0-A3 (РІРЅСѓС‚СЂРµРЅРЅРёРµ)
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A0_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap1
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A1_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap2
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A2_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap3
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A3_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap4
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  # Р РђРЎР§Р•Рў РЇР§Р•Р•Рљ (Р›РѕРіРёРєР° РєР°Рє РІ С‚РІРѕРµРј INA219 РєРѕРґРµ)
+  - platform: template
+    name: "Cell 1 Voltage"
+    id: cell1_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    update_interval: 500ms
+    lambda: |-
+      float v = id(ads_tap1).state * ${cell1_divider};
+      return (v < 0.2) ? 0.0 : v;
+
+  - platform: template
+    name: "Cell 2 Voltage"
+    id: cell2_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    update_interval: 500ms
+    lambda: |-
+      float v1 = id(ads_tap1).state * ${cell1_divider};
+      float v2 = id(ads_tap2).state * ${cell2_divider};
+      float diff = v2 - v1;
+      return (diff < 0.2) ? 0.0 : diff;
+
+  - platform: template
+    name: "Cell 3 Voltage"
+    id: cell3_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    update_interval: 500ms
+    lambda: |-
+      float v2 = id(ads_tap2).state * ${cell2_divider};
+      float v3 = id(ads_tap3).state * ${cell3_divider};
+      float diff = v3 - v2;
+      return (diff < 0.2) ? 0.0 : diff;
+
+  - platform: template
+    name: "Cell 4 Voltage"
+    id: cell4_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    update_interval: 500ms
+    lambda: |-
+      float v3 = id(ads_tap3).state * ${cell3_divider};
+      float v4 = id(ads_tap4).state * ${cell4_divider};
+      float diff = v4 - v3;
+      return (diff < 0.2) ? 0.0 : diff;
+
+web_server:
+  port: 80
+
+api:
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password

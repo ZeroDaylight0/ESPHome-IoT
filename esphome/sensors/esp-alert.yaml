@@ -1,0 +1,250 @@
+substitutions:
+  device_name: esp-alert
+  friendly_name: "ESP Alert Radar"
+
+esphome:
+  name: ${device_name}
+  platform: ESP32
+  board: esp32dev
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(alert_changed) = millis();
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+logger:
+  level: INFO
+
+api:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+web_server:
+  port: 80
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  id: mqtt_client
+  topic_prefix: esphome/${device_name}
+  on_message:
+    - topic: esp/alert/status
+      then:
+        - lambda: |-
+            if (x == "red" || x == "danger") {
+              id(alert_status) = 3;
+            } else if (x == "yellow" || x == "warn") {
+              id(alert_status) = 2;
+            } else if (x == "green" || x == "safe") {
+              id(alert_status) = 1;
+            } else {
+              id(alert_status) = 0;
+            }
+            id(alert_changed) = millis();
+    - topic: esp/alert/reason
+      then:
+        - lambda: |-
+            id(alert_reason) = x;
+    - topic: esp/alert/region
+      then:
+        - lambda: |-
+            id(alert_region) = x;
+    - topic: esp/weather/temp
+      then:
+        - lambda: |-
+            id(cur_temp) = atof(x.c_str());
+    - topic: esp/weather/humidity
+      then:
+        - lambda: |-
+            id(cur_hum) = atoi(x.c_str());
+    - topic: esp/weather/desc
+      then:
+        - lambda: |-
+            id(weather_desc) = x;
+
+# SPI РґР»СЏ РґРёСЃРїР»РµСЏ
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+  miso_pin: GPIO12
+
+# Р”РёСЃРїР»РµР№ CYD
+display:
+  - platform: ili9xxx
+    model: ili9342
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    rotation: 0
+    dimensions:
+      width: 320
+      height: 240
+    invert_colors: false
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color::BLACK);
+
+      int status = id(alert_status);
+
+      // === РЎРўРђРўРЈРЎ РўР Р•Р’РћР“Р (РћР“Р РћРњРќР«Р™) ===
+      if (status == 3) {
+        // РљР РђРЎРќРђРЇ РўР Р•Р’РћР“Рђ
+        it.printf(160, 40, id(font_huge), Color(0xFF, 0x11, 0x11), TextAlign::CENTER, "ALERT!");
+
+        // РџСЂРёС‡РёРЅР° РєСЂР°СЃРЅС‹Рј
+        if (!id(alert_reason).empty()) {
+          it.printf(160, 100, id(font_large), Color(0xFF, 0x22, 0x22), TextAlign::CENTER, "%s", id(alert_reason).c_str());
+        }
+
+      } else if (status == 2) {
+        // Р–РЃР›РўРђРЇ РўР Р•Р’РћР“Рђ
+        it.printf(160, 40, id(font_huge), Color(0xFF, 0xBB, 0x00), TextAlign::CENTER, "WARNING");
+
+        // РџСЂРёС‡РёРЅР° РєСЂР°СЃРЅС‹Рј
+        if (!id(alert_reason).empty()) {
+          it.printf(160, 100, id(font_large), Color(0xFF, 0x22, 0x22), TextAlign::CENTER, "%s", id(alert_reason).c_str());
+        }
+
+      } else if (status == 1) {
+        // Р‘Р•Р—РћРџРђРЎРќРћ
+        it.printf(160, 50, id(font_huge), Color(0x00, 0xFF, 0x22), TextAlign::CENTER, "SAFE");
+
+      } else {
+        // РќР•Рў Р”РђРќРќР«РҐ
+        it.printf(160, 50, id(font_large), Color(0x88, 0x88, 0x88), TextAlign::CENTER, "NO DATA");
+      }
+
+      // Р РµРіРёРѕРЅ РїРѕРґ СЃС‚Р°С‚СѓСЃРѕРј
+      it.printf(160, 140, id(font_medium), Color(0xBB, 0xBB, 0xBB), TextAlign::CENTER, "%s", id(alert_region).c_str());
+
+      // === РџРћР“РћР”Рђ Р’РќРР—РЈ ===
+      if (id(cur_temp) > -50) {
+        it.printf(160, 170, id(font_xlarge), Color(0xFF, 0xFF, 0xFF), TextAlign::CENTER, "%.1f C", id(cur_temp));
+        it.printf(160, 210, id(font_small), Color(0x99, 0x99, 0x99), TextAlign::CENTER, "%d%%  %s", id(cur_hum), id(weather_desc).c_str());
+      }
+
+# РџРѕРґСЃРІРµС‚РєР°
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Display Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
+    default_transition_length: 500ms
+    on_turn_on:
+      - light.turn_on:
+          id: backlight
+          brightness: 100%
+
+# РЁСЂРёС„С‚С‹ (РљР РЈРџРќР«Р• РґР»СЏ РІРёРґРёРјРѕСЃС‚Рё РёР·РґР°Р»РµРєР°)
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 900
+    id: font_huge
+    size: 48
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZ!0123456789"
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_xlarge
+    size: 32
+    glyphs: "0123456789.C "
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_large
+    size: 28
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇР°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏР†С–Р‡С—Р„С”ТђТ‘"
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_medium
+    size: 20
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_small
+    size: 16
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:;!?()-%+ "
+
+# Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ
+globals:
+  - id: alert_status
+    type: int
+    restore_value: no
+    initial_value: '1'
+  - id: alert_reason
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: alert_region
+    type: std::string
+    restore_value: no
+    initial_value: '"Kyiv"'
+  - id: alert_changed
+    type: unsigned long
+    restore_value: no
+    initial_value: '0'
+
+  # РџРѕРіРѕРґР°
+  - id: cur_temp
+    type: float
+    restore_value: no
+    initial_value: '-99'
+  - id: cur_hum
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: weather_desc
+    type: std::string
+    restore_value: no
+    initial_value: '"..."'
+
+# РЎРµРЅСЃРѕСЂС‹
+binary_sensor:
+  - platform: status
+    name: "Status"
+    id: device_status
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s

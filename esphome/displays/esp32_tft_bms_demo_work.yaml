@@ -1,0 +1,136 @@
+# ESP32 TFT BMS demo СЂР°Р±РѕС‡РёР№ РєРѕРЅС„РёРі
+
+esphome:
+  name: esp32_2432s028_display_test
+  comment: "ILI9341 TFT test вЂ“ cells, voltage, current"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+web_server:
+  port: 80
+logger:
+  level: DEBUG
+
+# ---------------- SPI ----------------
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+
+# ---------------- FONT ----------------
+font:
+  - file: "gfonts://Roboto"
+    id: font_big
+    size: 30
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 20
+
+# ---------------- FAKE SENSORS ----------------
+sensor:
+  - platform: template
+    name: "Total Voltage"
+    id: total_voltage
+    lambda: return 26.48;
+    update_interval: 1s
+
+  - platform: template
+    name: "Current"
+    id: current
+    lambda: return -12.3;
+    update_interval: 1s
+
+  - platform: template
+    name: "SOC"
+    id: soc
+    lambda: return 78;
+    update_interval: 1s
+
+  - platform: template
+    name: "Cell 1"
+    id: cell1
+    lambda: return 3.312;
+    update_interval: 1s
+
+  - platform: template
+    name: "Cell 2"
+    id: cell2
+    lambda: return 3.314;
+    update_interval: 1s
+
+  - platform: template
+    name: "Cell 3"
+    id: cell3
+    lambda: return 3.309;
+    update_interval: 1s
+
+  - platform: template
+    name: "Cell 4"
+    id: cell4
+    lambda: return 3.311;
+    update_interval: 1s
+
+# ---------------- COLORS ----------------
+color:
+  - id: my_black
+    hex: '000000'
+  - id: my_white
+    hex: 'FFFFFF'
+  - id: my_red
+    hex: 'FF0000'
+  - id: my_green
+    hex: '00FF00'
+  - id: my_blue
+    hex: '0000FF'
+  - id: my_cyan
+    hex: '00FFFF'
+  - id: my_yellow
+    hex: 'FFFF00'
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: tft_backlight
+    frequency: 1000 Hz
+    inverted: false
+
+light:
+  - platform: monochromatic
+    output: tft_backlight
+    name: "TFT Backlight"
+
+# ---------------- DISPLAY ----------------
+display:
+  - platform: ili9xxx
+    model: ili9341
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    rotation: 0
+    invert_colors: false
+    update_interval: 1s
+    color_palette: NONE
+    auto_clear_enabled: false
+
+    dimensions:
+      width: 320
+      height: 240
+      offset_width: 0
+      offset_height: 0
+
+    lambda: |-
+      // РћР±С‰РµРµ РЅР°РїСЂСЏР¶РµРЅРёРµ Рё С‚РѕРє СЃР»РµРІР° (Р±РѕР»СЊС€РёРµ)
+      it.printf(10, 20, id(font_big), Color(0x00FF00), "U: %.2f V", id(total_voltage).state);
+      it.printf(10, 70, id(font_big), Color(0x00FFFF), "I: %.1f A", id(current).state);
+
+      // РЇС‡РµР№РєРё СЃРїСЂР°РІР°, РЅР° СѓСЂРѕРІРЅРµ U Рё I (РІС‹СЂР°РІРЅРёРІР°РЅРёРµ РїРѕ РїСЂР°РІРѕРјСѓ РєСЂР°СЋ)
+      // РћС‚СЃС‚СѓРї СЃРїСЂР°РІР° ~10 px
+      it.printf(it.get_width() - 10, 20,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C1: %.3f V", id(cell1).state);
+      it.printf(it.get_width() - 10, 70,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C2: %.3f V", id(cell2).state);
+      it.printf(it.get_width() - 10, 120, id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C3: %.3f V", id(cell3).state);
+      it.printf(it.get_width() - 10, 170, id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C4: %.3f V", id(cell4).state);

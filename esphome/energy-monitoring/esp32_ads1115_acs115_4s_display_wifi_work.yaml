@@ -1,0 +1,214 @@
+substitutions:
+  device_name: esp32-ads1115-4cell-wifi
+  friendly_name: "ADS1115 4S Voltmeter"
+  # РљРѕСЌС„С„РёС†РёРµРЅС‚С‹ РґРµР»РёС‚РµР»РµР№ (РїРѕРґРїСЂР°РІСЊ РёС…, РµСЃР»Рё СЂРµР°Р»СЊРЅС‹Рµ РІРѕР»СЊС‚С‹ Р±СѓРґСѓС‚ РІСЂР°С‚СЊ)
+  cell1_divider: "2.0"
+  cell2_divider: "2.0"
+  cell3_divider: "3.0"
+  cell4_divider: "4.0"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "ads1115-4s-fallback"
+    password: !secret fallback_ap_password_esp32meter
+
+captive_portal:
+
+i2c:
+  sda: GPIO19
+  scl: GPIO22
+  scan: true
+  frequency: 100kHz
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: esphome/ads1115_4cell
+
+ads1115:
+  - address: 0x48
+    id: ads_cells
+
+font:
+  - file: "gfonts://Roboto Condensed"
+    id: font_label
+    size: 12
+  - file: "gfonts://Roboto Condensed"
+    id: font_value
+    size: 18
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    rotation: 180
+    address: 0x3C
+    id: oled_display
+    update_interval: 1s
+    lambda: |-
+      // РџРѕРєР°Р·С‹РІР°РµРј IP-Р°РґСЂРµСЃ РїРµСЂРІС‹Рµ 10 СЃРµРєСѓРЅРґ РїРѕСЃР»Рµ СЃС‚Р°СЂС‚Р° РёР»Рё РїРѕРєР° WiFi РЅРµ РїРѕРґРєР»СЋС‡РµРЅ
+      static bool wifi_connected = false;
+      static uint32_t connect_time = 0;
+
+      if (id(wifi_ip).has_state() && !wifi_connected) {
+        wifi_connected = true;
+        connect_time = millis();
+      }
+
+      if (!wifi_connected || (millis() - connect_time < 10000)) {
+        it.printf(64, 5, id(font_value), TextAlign::CENTER, "ADS1115 4S");
+
+        if (id(wifi_ip).has_state()) {
+          it.printf(64, 25, id(font_label), TextAlign::CENTER, "IP Address:");
+          it.printf(64, 45, id(font_value), TextAlign::CENTER, "%s", id(wifi_ip).state.c_str());
+        } else {
+          it.printf(64, 35, id(font_label), TextAlign::CENTER, "Connecting WiFi...");
+        }
+        return;
+      }
+
+      // Р РёСЃСѓРµРј СЂР°Р·РґРµР»РёС‚РµР»СЊРЅС‹Рµ Р»РёРЅРёРё (РєСЂРµСЃС‚)
+      it.line(64, 0, 64, 64);
+      it.line(0, 32, 128, 32);
+
+      // РЇС‡РµР№РєР° 1
+      it.printf(4, 2, id(font_label), "C1");
+      it.printf(4, 14, id(font_value), "%.2fV", id(cell1_v).state);
+
+      // РЇС‡РµР№РєР° 2
+      it.printf(68, 2, id(font_label), "C2");
+      it.printf(68, 14, id(font_value), "%.2fV", id(cell2_v).state);
+
+      // РЇС‡РµР№РєР° 3
+      it.printf(4, 34, id(font_label), "C3");
+      it.printf(4, 46, id(font_value), "%.2fV", id(cell3_v).state);
+
+      // РЇС‡РµР№РєР° 4
+      it.printf(68, 34, id(font_label), "C4");
+      it.printf(68, 46, id(font_value), "%.2fV", id(cell4_v).state);
+
+sensor:
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A0_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap1
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A1_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap2
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A2_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap3
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  - platform: ads1115
+    ads1115_id: ads_cells
+    multiplexer: "A3_GND"
+    gain: 4.096
+    update_interval: 500ms
+    id: ads_tap4
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 10
+          send_every: 1
+
+  # Р¤РёРЅР°Р»СЊРЅС‹Рµ СЃРµРЅСЃРѕСЂС‹ СЃ РјР°С‚РµРјР°С‚РёРєРѕР№ РІС‹С‡РёС‚Р°РЅРёСЏ Рё Р·Р°С‰РёС‚РѕР№ РѕС‚ С€СѓРјР°
+  - platform: template
+    name: "Cell 1 Voltage"
+    id: cell1_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    lambda: |-
+      float v = id(ads_tap1).state * ${cell1_divider};
+      return (v < 0.3) ? 0.0 : v;
+    update_interval: 500ms
+
+  - platform: template
+    name: "Cell 2 Voltage"
+    id: cell2_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    lambda: |-
+      float tap1 = id(ads_tap1).state * ${cell1_divider};
+      float tap2 = id(ads_tap2).state * ${cell2_divider};
+      float v = tap2 - tap1;
+      return (v < 0.3) ? 0.0 : v;
+    update_interval: 500ms
+
+  - platform: template
+    name: "Cell 3 Voltage"
+    id: cell3_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    lambda: |-
+      float tap2 = id(ads_tap2).state * ${cell2_divider};
+      float tap3 = id(ads_tap3).state * ${cell3_divider};
+      float v = tap3 - tap2;
+      return (v < 0.3) ? 0.0 : v;
+    update_interval: 500ms
+
+  - platform: template
+    name: "Cell 4 Voltage"
+    id: cell4_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    lambda: |-
+      float tap3 = id(ads_tap3).state * ${cell3_divider};
+      float tap4 = id(ads_tap4).state * ${cell4_divider};
+      float v = tap4 - tap3;
+      return (v < 0.3) ? 0.0 : v;
+    update_interval: 500ms
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "ESP IP Address"
+      id: wifi_ip
+
+web_server:
+  port: 80
+
+api:
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password

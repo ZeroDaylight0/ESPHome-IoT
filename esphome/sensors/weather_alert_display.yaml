@@ -1,0 +1,296 @@
+esphome:
+  name: weather-alert-display
+  platform: ESP32
+  board: esp32dev
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+
+api:
+
+ota:
+  platform: esphome
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  topic_prefix: esp
+  on_message:
+    - topic: esp/zvonok
+      then:
+        - lambda: |-
+            std::string msg(x.c_str());
+            if (msg == "yellow") {
+              auto call = id(status_led).turn_on();
+              call.set_rgb(0.59, 0.47, 0.0);
+              call.perform();
+            } else if (msg == "green") {
+              auto call = id(status_led).turn_on();
+              call.set_rgb(0.0, 0.59, 0.0);
+              call.perform();
+            } else if (msg == "off" || msg == "red") {
+              id(status_led).turn_off().perform();
+            }
+            id(status_msg) = msg;
+            id(show_msg) = true;
+            id(msg_timer) = millis();
+
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+  frequency: 400kHz
+
+light:
+  - platform: neopixelbus
+    id: status_led
+    type: GRB
+    variant: WS2812
+    pin: GPIO5
+    num_leds: 1
+    name: "Status LED"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO4
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Button Call"
+    on_press:
+      then:
+        - mqtt.publish:
+            topic: esp/zvonok
+            payload: "call"
+        - lambda: |-
+            id(status_msg) = "CALL";
+            id(show_msg) = true;
+            id(msg_timer) = millis();
+
+  - platform: gpio
+    pin:
+      number: GPIO19
+      mode: INPUT_PULLUP
+      inverted: true
+    id: btn_time
+    name: "Button Time"
+
+http_request:
+  id: http_client
+  useragent: esphome/weather_display
+  timeout: 10s
+  verify_ssl: false
+
+sensor:
+  - platform: template
+    name: "Current Temperature"
+    id: current_temp
+    unit_of_measurement: "В°C"
+    accuracy_decimals: 1
+
+  - platform: template
+    name: "Current Humidity"
+    id: current_hum
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+
+  - platform: template
+    name: "Current Weather Code"
+    id: current_code
+    accuracy_decimals: 0
+
+text_sensor:
+  - platform: template
+    name: "Alert Status"
+    id: alert_status_text
+
+globals:
+  - id: alert_status
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: show_msg
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: status_msg
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+
+  - id: msg_timer
+    type: unsigned long
+    restore_value: no
+    initial_value: '0'
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    update_interval: 100ms
+    lambda: |-
+      if (id(show_msg)) {
+        // РџРѕРєР°Р·С‹РІР°РµРј СЃРѕРѕР±С‰РµРЅРёРµ
+        it.printf(64, 32, id(font_large), TextAlign::CENTER, id(status_msg).c_str());
+        if (millis() - id(msg_timer) > 3000) {
+          id(show_msg) = false;
+        }
+      } else {
+        // РћСЃРЅРѕРІРЅРѕР№ СЌРєСЂР°РЅ - С‚РѕР»СЊРєРѕ С‚РµРєСѓС‰РёРµ РґР°РЅРЅС‹Рµ
+        float t = id(current_temp).state;
+        int c = (int)id(current_code).state;
+
+        // РўРµРєСЃС‚ "NOW" РІ СѓРіР»Сѓ
+        it.print(0, 10, id(font_small), "NOW");
+
+        // Р’Р»Р°Р¶РЅРѕСЃС‚СЊ
+        it.printf(95, 10, id(font_small), "%.0f%%", id(current_hum).state);
+
+        // Р Р°Р·РґРµР»РёС‚РµР»СЊ
+        it.line(0, 13, 128, 13);
+
+        // РњРёРіР°СЋС‰РёР№ РёРЅРґРёРєР°С‚РѕСЂ WiFi
+        if ((millis() % 1000) > 500) {
+          it.rectangle(122, 2, 4, 4);
+        }
+
+        // РўРµРјРїРµСЂР°С‚СѓСЂР° СЃ РґРёРЅР°РјРёС‡РµСЃРєРѕР№ РїРѕР·РёС†РёРµР№ В°C
+        char temp_buf[10];
+        snprintf(temp_buf, sizeof(temp_buf), "%.1f", t);
+        it.print(0, 46, id(font_temp), temp_buf);
+
+        int temp_width = 0;
+        if (t >= 10.0 || t <= -10.0) {
+          temp_width = 55;
+        } else if (t >= 0.0) {
+          temp_width = 45;
+        } else {
+          temp_width = 50;
+        }
+        it.print(temp_width, 44, id(font_medium), "C");
+
+        // РРЅРґРёРєР°С‚РѕСЂ С‚СЂРµРІРѕРіРё
+        if (id(alert_status) > 0) {
+          int box_x = 75, box_y = 18, box_w = 50, box_h = 24;
+
+          it.rectangle(box_x, box_y, box_w, box_h);
+
+          if (id(alert_status) == 3) {
+            // РљСЂР°СЃРЅС‹Р№ - Р·Р°РїРѕР»РЅРµРЅРЅС‹Р№
+            it.filled_rectangle(box_x, box_y, box_w, box_h);
+            it.print(box_x + 8, box_y + 16, id(font_small), COLOR_OFF, TextAlign::TOP_LEFT, "RED");
+          } else if (id(alert_status) == 2) {
+            // Р–С‘Р»С‚С‹Р№ - С€С‚СЂРёС…РѕРІРєР°
+            for (int i = box_y + 2; i < box_y + box_h - 2; i += 3) {
+              it.horizontal_line(box_x + 2, i, box_w - 4);
+            }
+            it.print(box_x + 4, box_y + 16, id(font_small), "WARN");
+          } else if (id(alert_status) == 1) {
+            // Р—РµР»С‘РЅС‹Р№ - СЂР°РјРєР°
+            it.print(box_x + 6, box_y + 16, id(font_small), "SAFE");
+          }
+        }
+
+        // РћРїРёСЃР°РЅРёРµ РїРѕРіРѕРґС‹
+        const char* weather_str = "UNKNOWN";
+        if (c == 0) weather_str = "CLEAR";
+        else if (c <= 3) weather_str = "CLOUDY";
+        else if (c <= 48) weather_str = "FOGGY";
+        else if (c <= 67) weather_str = "RAINY";
+        else if (c <= 77) weather_str = "SNOW";
+        else if (c <= 82) weather_str = "SHOWERS";
+        else weather_str = "STORM";
+
+        it.print(0, 63, id(font_weather), weather_str);
+      }
+
+font:
+  - file: "C:/Windows/Fonts/arial.ttf"
+    id: font_small
+    size: 12
+
+  - file: "C:/Windows/Fonts/arial.ttf"
+    id: font_medium
+    size: 14
+    glyphs: "CВ°"
+
+  - file: "C:/Windows/Fonts/arial.ttf"
+    id: font_large
+    size: 18
+
+  - file: "C:/Windows/Fonts/arial.ttf"
+    id: font_temp
+    size: 24
+    glyphs: "0123456789.-"
+
+  - file: "C:/Windows/Fonts/arial.ttf"
+    id: font_weather
+    size: 15
+
+interval:
+  - interval: 10min
+    then:
+      - http_request.get:
+          url: "http://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.52&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto"
+          on_response:
+            then:
+              - lambda: |-
+                  std::string data(body.begin(), body.end());
+                  ESP_LOGD("weather", "Got weather response");
+
+                  // РџР°СЂСЃРёРј С‚РµРјРїРµСЂР°С‚СѓСЂСѓ
+                  size_t pos = data.find("\"temperature_2m\":");
+                  if (pos != std::string::npos) {
+                    float temp = atof(data.substr(pos + 17).c_str());
+                    id(current_temp).publish_state(temp);
+                  }
+
+                  // РџР°СЂСЃРёРј РІР»Р°Р¶РЅРѕСЃС‚СЊ
+                  pos = data.find("\"relative_humidity_2m\":");
+                  if (pos != std::string::npos) {
+                    int hum = atoi(data.substr(pos + 23).c_str());
+                    id(current_hum).publish_state(hum);
+                  }
+
+                  // РџР°СЂСЃРёРј weather_code (РїРµСЂРІРѕРµ РІС…РѕР¶РґРµРЅРёРµ РІ current)
+                  pos = data.find("\"current\"");
+                  if (pos != std::string::npos) {
+                    size_t code_pos = data.find("\"weather_code\":", pos);
+                    if (code_pos != std::string::npos) {
+                      int code = atoi(data.substr(code_pos + 15).c_str());
+                      id(current_code).publish_state(code);
+                    }
+                  }
+
+  - interval: 2min
+    then:
+      - http_request.get:
+          url: "https://alerts.in.ua/api/states/31"
+          on_response:
+            then:
+              - lambda: |-
+                  std::string data(body.begin(), body.end());
+                  ESP_LOGD("alert", "Got alert response");
+
+                  // РџР°СЂСЃРёРј alert: true/false
+                  bool has_alert = data.find("\"alert\":true") != std::string::npos;
+
+                  if (has_alert) {
+                    // РџСЂРѕРІРµСЂСЏРµРј С‚РёРї С‚СЂРµРІРѕРіРё
+                    if (data.find("\"type\":\"air\"") != std::string::npos ||
+                        data.find("\"type\":\"missile\"") != std::string::npos) {
+                      id(alert_status) = 3; // РљСЂР°СЃРЅС‹Р№
+                      id(alert_status_text).publish_state("RED");
+                    } else {
+                      id(alert_status) = 2; // Р–С‘Р»С‚С‹Р№
+                      id(alert_status_text).publish_state("WARN");
+                    }
+                  } else {
+                    id(alert_status) = 1; // Р—РµР»С‘РЅС‹Р№
+                    id(alert_status_text).publish_state("SAFE");
+                  }

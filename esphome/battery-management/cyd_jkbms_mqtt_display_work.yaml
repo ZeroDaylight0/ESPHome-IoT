@@ -1,0 +1,128 @@
+# CYD РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РґР»СЏ JK-BMS СЃ MQTT Рё РґРёСЃРїР»РµРµРј
+
+esphome:
+  name: cyd_jkbms_display
+  comment: "CYD Display for JK-BMS via MQTT"
+  platform: ESP32
+  board: esp32dev
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+logger:
+  level: INFO
+  baud_rate: 0
+
+mqtt:
+  broker: !secret mqtt_host
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: tft_backlight
+    frequency: 1000 Hz
+    inverted: false
+
+light:
+  - platform: monochromatic
+    output: tft_backlight
+    name: "TFT Backlight"
+    restore_mode: ALWAYS_ON
+
+font:
+  - file: "6320-font.ttf"
+    id: font_big
+    size: 23
+    glyphs: "0123456789.-+AVWUIBTNntaCВ°:% "
+
+
+sensor:
+  - platform: mqtt_subscribe
+    name: "Total Voltage"
+    id: total_voltage
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-total-voltage/state"
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+
+  - platform: mqtt_subscribe
+    name: "Current"
+    id: current
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-current/state"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+
+
+  - platform: mqtt_subscribe
+    name: "Cell 1"
+    id: cell1
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-cell-1/state"
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+
+
+  - platform: mqtt_subscribe
+    name: "Cell 2"
+    id: cell2
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-cell-2/state"
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+
+
+  - platform: mqtt_subscribe
+    name: "Cell 3"
+    id: cell3
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-cell-3/state"
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+
+
+  - platform: mqtt_subscribe
+    name: "Cell 4"
+    id: cell4
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-cell-4/state"
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+
+
+  - platform: mqtt_subscribe
+    name: "Battery Temp"
+    id: battery_temp
+    topic: "jk_bms_B1A8S10P/sensor/jk-bms-battery-temp/state"
+    unit_of_measurement: "В°C"
+    accuracy_decimals: 1
+
+
+display:
+  - platform: ili9xxx
+    model: ili9341
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    rotation: 0
+    invert_colors: false
+    update_interval: 5s
+    color_palette: NONE
+    auto_clear_enabled: true
+
+    dimensions:
+      width: 320
+      height: 240
+      offset_width: 0
+      offset_height: 0   # РџРѕРїСЂРѕР±СѓР№ 35 РёР»Рё 40, РµСЃР»Рё РµСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚С‹ СЃРїСЂР°РІР°
+
+    lambda: |-
+      it.printf(10, 25,  id(font_big), Color(0x00FF00), "U: %.2f V", id(total_voltage).state);
+      it.printf(10, 85,  id(font_big), Color(0x00FFFF), "I: %.1f A", id(current).state);
+      it.printf(10, 145, id(font_big), Color(0x00FFFF), "Bat: %.1fВ°C", id(battery_temp).state);
+
+      it.printf(it.get_width() - 10, 25,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C1: %.3f V", id(cell1).state);
+      it.printf(it.get_width() - 10, 85,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C2: %.3f V", id(cell2).state);
+      it.printf(it.get_width() - 10, 145, id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C3: %.3f V", id(cell3).state);
+      it.printf(it.get_width() - 10, 205, id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C4: %.3f V", id(cell4).state);

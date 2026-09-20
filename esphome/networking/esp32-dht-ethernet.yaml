@@ -1,0 +1,49 @@
+esphome:
+  name: esp32-dht-ethernet_7
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+logger:
+
+api:
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+
+ethernet:
+  type: W5500
+  clk_pin: GPIO21
+  mosi_pin: GPIO10
+  miso_pin: GPIO9
+  cs_pin: GPIO20
+  clock_speed: 8MHz
+
+
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  client_id: esp32-dht-ethernet-7
+
+
+sensor:
+  - platform: dht
+    pin: GPIO0
+    model: DHT11
+    temperature:
+      name: "DHT Temperature"
+    humidity:
+      name: "DHT Humidity"
+    update_interval: 60s

@@ -1,0 +1,48 @@
+# ESP32-C6 + 4INA219 + MQTT Р±Р°Р·РѕРІС‹Р№ СЂР°Р±РѕС‡РёР№ РєРѕРЅС„РёРі
+
+esphome:
+  name: bms-monitor-esp32c6
+  friendly_name: "BMS_mon_4S"
+
+esp32:
+  variant: esp32c6
+  board: esp32c6
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+
+ethernet:
+  type: W5500
+  clk_pin: GPIO7     # SCK / CLK
+  mosi_pin: GPIO6    # MOSI / DI
+  miso_pin: GPIO5    # MISO / DO
+  cs_pin: GPIO4      # CS / SS
+  manual_ip:
+    static_ip: 192.168.249.31
+    gateway: 192.168.249.1
+    subnet: 255.255.255.0
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  frequency: 400kHz
+
+mqtt:
+  broker: !secret mqtt_host_legacy
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: esphome/4ina219_monitor
+
+web_server:
+  port: 80
+
+api:
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password

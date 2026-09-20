@@ -1,0 +1,411 @@
+# JK-BMS UART AP TFT РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ
+
+esphome:
+  name: testtftbms
+  platform: ESP32
+  board: esp32dev
+  on_boot:
+    priority: 800
+    then:
+      - lambda: |-
+          id(settings_ready) = false;
+      - lambda: |-
+          int n = atoi(id(cell_count_text).state.c_str());
+          if (n < 1) n = 1;
+          if (n > 16) n = 16;
+          id(g_cell_count) = n;
+
+          if (!id(mqtt_broker_text).state.empty()) {
+            id(mqtt_client).set_broker_address(id(mqtt_broker_text).state);
+          }
+          if (!id(mqtt_user_text).state.empty()) {
+            id(mqtt_client).set_username(id(mqtt_user_text).state);
+          }
+          if (!id(mqtt_pass_text).state.empty()) {
+            id(mqtt_client).set_password(id(mqtt_pass_text).state);
+          }
+      - delay: 5s
+      - lambda: |-
+          id(settings_ready) = true;
+
+preferences:
+  flash_write_interval: 5s
+
+wifi:
+  ap:
+    ssid: "BMSSetup"
+    password: !secret fallback_ap_password
+    ap_timeout: 0s
+
+captive_portal:
+
+web_server:
+  port: 80
+
+logger:
+  baud_rate: 115200
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+uart:
+  rx_pin: GPIO3
+  tx_pin: GPIO21
+  baud_rate: 115200
+
+external_components:
+  - source:
+      type: local
+      path: .esphome/external_components/beb5e5d2/components
+
+jk_bms:
+  update_interval: 10s
+
+mqtt:
+  id: mqtt_client
+  broker: !secret mqtt_host
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: "jkbms_2_AP_cell"
+  discovery: false
+  on_connect:
+    - logger.log: "MQTT connected"
+
+globals:
+  - id: screen_page
+    type: int
+    initial_value: '0'
+  - id: g_cell_count
+    type: int
+    initial_value: '4'
+  - id: wifi_reset_flag
+    type: bool
+    initial_value: 'false'
+  - id: settings_ready
+    type: bool
+    initial_value: 'false'
+
+text:
+  - platform: template
+    name: "MQTT Broker"
+    id: mqtt_broker_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "192.168.1.100"
+    entity_category: config
+    icon: mdi:server
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(settings_ready);'
+            then:
+              - logger.log: "MQTT settings changed, rebooting"
+              - delay: 1s
+              - button.press: restart_device
+
+  - platform: template
+    name: "MQTT Username"
+    id: mqtt_user_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    entity_category: config
+    icon: mdi:account
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(settings_ready);'
+            then:
+              - logger.log: "MQTT settings changed, rebooting"
+              - delay: 1s
+              - button.press: restart_device
+
+  - platform: template
+    name: "MQTT Password"
+    id: mqtt_pass_text
+    mode: PASSWORD
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    entity_category: config
+    icon: mdi:lock
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: 'return id(settings_ready);'
+            then:
+              - logger.log: "MQTT settings changed, rebooting"
+              - delay: 1s
+              - button.press: restart_device
+
+  - platform: template
+    name: "Cell Count"
+    id: cell_count_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "4"
+    entity_category: config
+    icon: mdi:battery-plus
+    on_value:
+      then:
+        - lambda: |-
+            int n = atoi(x.c_str());
+            if (n < 1) n = 1;
+            if (n > 16) n = 16;
+            id(g_cell_count) = n;
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Reset Button"
+    id: reset_button
+    filters:
+      - delayed_on: 3000ms
+    on_press:
+      then:
+        - logger.log: "BOOT held 3s - clearing WiFi, restarting..."
+        - lambda: |-
+            id(wifi_reset_flag) = true;
+        - delay: 2s
+        - lambda: |-
+            global_preferences->reset();
+            WiFi.disconnect(true, true);
+        - delay: 200ms
+        - button.press: restart_device
+
+button:
+  - platform: restart
+    id: restart_device
+    name: "Restart Device"
+
+sensor:
+  - platform: jk_bms
+    cell_voltage_1:
+      id: cell1
+      name: "Cell 1"
+    cell_voltage_2:
+      id: cell2
+      name: "Cell 2"
+    cell_voltage_3:
+      id: cell3
+      name: "Cell 3"
+    cell_voltage_4:
+      id: cell4
+      name: "Cell 4"
+    cell_voltage_5:
+      id: cell5
+      name: "Cell 5"
+    cell_voltage_6:
+      id: cell6
+      name: "Cell 6"
+    cell_voltage_7:
+      id: cell7
+      name: "Cell 7"
+    cell_voltage_8:
+      id: cell8
+      name: "Cell 8"
+    cell_voltage_9:
+      id: cell9
+      name: "Cell 9"
+    cell_voltage_10:
+      id: cell10
+      name: "Cell 10"
+    cell_voltage_11:
+      id: cell11
+      name: "Cell 11"
+    cell_voltage_12:
+      id: cell12
+      name: "Cell 12"
+    cell_voltage_13:
+      id: cell13
+      name: "Cell 13"
+    cell_voltage_14:
+      id: cell14
+      name: "Cell 14"
+    cell_voltage_15:
+      id: cell15
+      name: "Cell 15"
+    cell_voltage_16:
+      id: cell16
+      name: "Cell 16"
+    total_voltage:
+      id: total_voltage
+      name: "Total Voltage"
+    current:
+      id: bms_current
+      name: "Current"
+    power:
+      id: bms_power
+      name: "Power"
+    capacity_remaining:
+      id: bms_soc
+      name: "State of Charge"
+    temperature_sensor_1:
+      id: bms_temp1
+      name: "Temperature 1"
+    temperature_sensor_2:
+      id: bms_temp2
+      name: "Temperature 2"
+    min_cell_voltage:
+      id: bms_min_cell
+      name: "Min Cell Voltage"
+    max_cell_voltage:
+      id: bms_max_cell
+      name: "Max Cell Voltage"
+    delta_cell_voltage:
+      id: bms_delta
+      name: "Cell Delta"
+
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+
+font:
+  - file: "6320-font.ttf"
+    id: font_label
+    size: 18
+  - file: "6320-font.ttf"
+    id: font_value
+    size: 36
+  - file: "6320-font.ttf"
+    id: font_unit
+    size: 14
+  - file: "6320-font.ttf"
+    id: font_small
+    size: 11
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: wifi_ip
+      name: "IP Address"
+
+display:
+  - platform: st7735
+    model: "INITR_18BLACKTAB"
+    cs_pin: GPIO5
+    dc_pin: GPIO4
+    reset_pin: GPIO2
+    rotation: 0
+    row_start: 0
+    col_start: 0
+    device_height: 160
+    device_width: 128
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color(0, 0, 0));
+      const int W = 128;
+      const int H = 160;
+      const int CX = W / 2;
+      int page = id(screen_page);
+      int cell_count = id(g_cell_count);
+      int total_pages = 4 + cell_count + 1;
+
+      if (id(wifi_reset_flag)) {
+        it.printf(CX, 60, id(font_label), Color(255, 60, 60), TextAlign::TOP_CENTER, "WiFi reset");
+        it.printf(CX, 90, id(font_label), Color(255, 255, 255), TextAlign::TOP_CENTER, "Restarting...");
+        return;
+      }
+
+      const char* label = "";
+      const char* unit = "";
+      char val_buf[32] = "--";
+      Color val_color = Color(255, 255, 255);
+
+      if (page == 0) {
+        label = "VOLTAGE"; unit = "V"; val_color = Color(0, 255, 80);
+        if (id(total_voltage).has_state() && !isnan(id(total_voltage).state))
+          snprintf(val_buf, sizeof(val_buf), "%.2f", id(total_voltage).state);
+      } else if (page == 1) {
+        label = "CURRENT"; unit = "A"; float cur = id(bms_current).has_state() ? id(bms_current).state : NAN;
+        val_color = (!isnan(cur) && cur >= 0) ? Color(0, 255, 80) : Color(255, 60, 60);
+        if (!isnan(cur)) snprintf(val_buf, sizeof(val_buf), "%.1f", cur);
+      } else if (page == 2) {
+        label = "POWER"; unit = "W"; float pwr = id(bms_power).has_state() ? id(bms_power).state : NAN;
+        val_color = (!isnan(pwr) && pwr >= 0) ? Color(0, 255, 80) : Color(255, 60, 60);
+        if (!isnan(pwr)) snprintf(val_buf, sizeof(val_buf), "%.0f", pwr);
+      } else if (page == 3) {
+        label = "CHARGE"; unit = "%"; val_color = Color(0, 200, 255);
+        float soc = id(bms_soc).has_state() ? id(bms_soc).state : NAN;
+        if (!isnan(soc)) {
+          if (soc < 20.0f) val_color = Color(255, 60, 60);
+          else if (soc < 50.0f) val_color = Color(255, 200, 0);
+          else val_color = Color(0, 255, 80);
+          snprintf(val_buf, sizeof(val_buf), "%.0f", soc);
+        }
+      } else if (page == total_pages - 1) {
+        label = "IP"; unit = ""; val_color = Color(0, 200, 255);
+        if (id(wifi_ip).has_state()) snprintf(val_buf, sizeof(val_buf), "%s", id(wifi_ip).state.c_str());
+        else snprintf(val_buf, sizeof(val_buf), "...");
+      } else {
+        int cell_idx = page - 4;
+        if (cell_idx < cell_count) {
+          float cv = NAN;
+          switch (cell_idx) {
+            case 0: if (id(cell1).has_state()) cv = id(cell1).state; break;
+            case 1: if (id(cell2).has_state()) cv = id(cell2).state; break;
+            case 2: if (id(cell3).has_state()) cv = id(cell3).state; break;
+            case 3: if (id(cell4).has_state()) cv = id(cell4).state; break;
+            case 4: if (id(cell5).has_state()) cv = id(cell5).state; break;
+            case 5: if (id(cell6).has_state()) cv = id(cell6).state; break;
+            case 6: if (id(cell7).has_state()) cv = id(cell7).state; break;
+            case 7: if (id(cell8).has_state()) cv = id(cell8).state; break;
+            case 8: if (id(cell9).has_state()) cv = id(cell9).state; break;
+            case 9: if (id(cell10).has_state()) cv = id(cell10).state; break;
+            case 10: if (id(cell11).has_state()) cv = id(cell11).state; break;
+            case 11: if (id(cell12).has_state()) cv = id(cell12).state; break;
+            case 12: if (id(cell13).has_state()) cv = id(cell13).state; break;
+            case 13: if (id(cell14).has_state()) cv = id(cell14).state; break;
+            case 14: if (id(cell15).has_state()) cv = id(cell15).state; break;
+            case 15: if (id(cell16).has_state()) cv = id(cell16).state; break;
+          }
+          static char lbuf[12];
+          snprintf(lbuf, sizeof(lbuf), "CELL %d", cell_idx + 1);
+          label = lbuf;
+          unit = "V";
+          if (!isnan(cv)) {
+            float vmin = id(bms_min_cell).has_state() ? id(bms_min_cell).state : 0;
+            float vmax = id(bms_max_cell).has_state() ? id(bms_max_cell).state : 99;
+            if (cv <= vmin + 0.003f) val_color = Color(255, 60, 60);
+            else if (cv >= vmax - 0.003f) val_color = Color(0, 200, 255);
+            else if (cv < 3.20f) val_color = Color(255, 200, 0);
+            else val_color = Color(0, 255, 80);
+            snprintf(val_buf, sizeof(val_buf), "%.3f", cv);
+          }
+        }
+      }
+
+      it.printf(CX, 18, id(font_label), Color(140, 140, 140), TextAlign::TOP_CENTER, "%s", label);
+      if (page == total_pages - 1)
+        it.printf(CX, 65, id(font_small), val_color, TextAlign::TOP_CENTER, "%s", val_buf);
+      else
+        it.printf(CX, 52, id(font_value), val_color, TextAlign::TOP_CENTER, "%s", val_buf);
+      it.printf(CX, 108, id(font_unit), Color(100, 100, 100), TextAlign::TOP_CENTER, "%s", unit);
+
+      int bar_w = (W - 4) / total_pages;
+      int bar_y = H - 4;
+      for (int i = 0; i < total_pages; i++) {
+        int bx = 2 + i * bar_w;
+        if (i == page) it.filled_rectangle(bx, bar_y, bar_w - 1, 3, val_color);
+        else it.filled_rectangle(bx, bar_y, bar_w - 1, 3, Color(40, 40, 40));
+      }
+
+interval:
+  - interval: 3s
+    then:
+      - lambda: |-
+          if (id(wifi_reset_flag)) return;
+          int total_pages = 4 + id(g_cell_count) + 1;
+          id(screen_page) = (id(screen_page) + 1) % total_pages;
+

@@ -1,0 +1,354 @@
+substitutions:
+  device_name: esp-alert
+  friendly_name: "ESP Alert Radar"
+
+esphome:
+  name: ${device_name}
+  platform: ESP32
+  board: esp32dev
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(alert_changed) = millis();
+          id(auto_return_timer) = millis();
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+logger:
+  level: INFO # РЎРЅРёР·РёР»Рё РґРѕ INFO, С‡С‚РѕР±С‹ Р±РµСЃРєРѕРЅРµС‡РЅС‹Р№ СЃРїР°Рј РѕС€РёР±РѕРє С‚Р°С‡Р° РЅРµ РІРµС€Р°Р» РїР»Р°С‚Сѓ
+
+api:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+web_server:
+  port: 80
+
+mqtt:
+  broker: !secret mqtt_host
+  port: 1883
+  id: mqtt_client
+  topic_prefix: esphome/${device_name}
+  on_message:
+    - topic: esp/alert/status
+      then:
+        - lambda: |-
+            if (x == "red" || x == "danger") {
+              id(alert_status) = 3;
+            } else if (x == "yellow" || x == "warn") {
+              id(alert_status) = 2;
+            } else if (x == "green" || x == "safe") {
+              id(alert_status) = 1;
+            } else {
+              id(alert_status) = 0;
+            }
+            id(alert_changed) = millis();
+    - topic: esp/alert/reason
+      then:
+        - lambda: |-
+            id(alert_reason) = x;
+    - topic: esp/alert/region
+      then:
+        - lambda: |-
+            id(alert_region) = x;
+    - topic: esp/weather/temp
+      then:
+        - lambda: |-
+            id(cur_temp) = atof(x.c_str());
+    - topic: esp/weather/humidity
+      then:
+        - lambda: |-
+            id(cur_hum) = atoi(x.c_str());
+    - topic: esp/weather/desc
+      then:
+        - lambda: |-
+            id(weather_desc) = x;
+
+# SPI РґР»СЏ РґРёСЃРїР»РµСЏ Рё С‚Р°С‡СЃРєСЂРёРЅР°
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+  miso_pin: GPIO12
+
+# РСЃРїСЂР°РІР»РµРЅРЅР°СЏ РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ С‚Р°С‡СЃРєСЂРёРЅР° XPT2046 РґР»СЏ CYD
+touchscreen:
+  - platform: xpt2046
+    id: my_touchscreen
+    cs_pin: GPIO33
+    interrupt_pin: GPIO36 # РџСЂРµСЂС‹РІР°РЅРёРµ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ Р±РµСЃРєРѕРЅРµС‡РЅС‹Р№ СЃРїР°Рј Р»РѕР¶РЅС‹С… РЅР°Р¶Р°С‚РёР№
+    update_interval: 30ms
+    threshold: 600       # Р—Р°С‰РёС‚Р° РѕС‚ РґСЂРµР±РµР·РіР° СЃРµРЅСЃРѕСЂР°
+    swap_x_y: true       # РђРґР°РїС‚Р°С†РёСЏ РѕСЃРµР№ РїРѕРґ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЂРµР¶РёРј
+    invert_x: false
+    invert_y: true
+    on_touch:
+      - lambda: |-
+          // РРіРЅРѕСЂРёСЂСѓРµРј РјСѓСЃРѕСЂРЅС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ 0,0
+          if (touch.x <= 5 && touch.y <= 5) return;
+
+          ESP_LOGI("touch", "РќР°Р¶Р°С‚РёРµ: X=%d, Y=%d", touch.x, touch.y);
+
+          // РџСЂРѕРІРµСЂСЏРµРј РїРѕРїР°РґР°РЅРёРµ РїРѕ РЅРёР¶РЅРµРјСѓ СЂСЏРґСѓ РєРЅРѕРїРѕРє (Y РѕС‚ 190 РґРѕ 235)
+          if (touch.y >= 190 && touch.y <= 235) {
+            // Р›Р•Р’РђРЇ РљРќРћРџРљРђ (X РѕС‚ 15 РґРѕ 145) вЂ” РџРµСЂРµРєР»СЋС‡РµРЅРёРµ СЌРєСЂР°РЅРѕРІ Р Р°РґР°СЂ/РџРѕРіРѕРґР°
+            if (touch.x >= 15 && touch.x <= 145) {
+              id(current_page) = (id(current_page) == 0) ? 1 : 0;
+              id(auto_return_timer) = millis();
+              ESP_LOGI("touch", "РљРЅРѕРїРєР° PAGE РЅР°Р¶Р°С‚Р°");
+            }
+            // РџР РђР’РђРЇ РљРќРћРџРљРђ (X РѕС‚ 175 РґРѕ 305) вЂ” РћС‚РїСЂР°РІРєР° MQTT CALL
+            else if (touch.x >= 175 && touch.x <= 305) {
+              id(mqtt_client).publish("esp/zvonok", "call");
+              ESP_LOGI("touch", "РљРЅРѕРїРєР° CALL РЅР°Р¶Р°С‚Р°");
+            }
+          }
+
+# Р”РёСЃРїР»РµР№ ILI9341 320x240
+display:
+  - platform: ili9xxx
+    model: ili9341
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    rotation: 90
+    dimensions:
+      width: 320
+      height: 240
+    invert_colors: false
+    update_interval: 500ms # Р”РµР»Р°РµРј РѕР±РЅРѕРІР»РµРЅРёРµ С‡Р°С‰Рµ РґР»СЏ РѕС‚Р·С‹РІС‡РёРІРѕСЃС‚Рё РёРЅС‚РµСЂС„РµР№СЃР°
+    lambda: |-
+      // РџРѕР»РЅР°СЏ РѕС‡РёСЃС‚РєР° СЌРєСЂР°РЅР° С‡С‘СЂРЅС‹Рј С†РІРµС‚РѕРј РїРµСЂРµРґ РєР°Р¶РґС‹Рј СЂРµРЅРґРµСЂРѕРј
+      it.fill(Color::BLACK);
+
+      int status = id(alert_status);
+      unsigned long time_since = (millis() - id(alert_changed)) / 1000;
+
+      // РќР°СЃС‚СЂРѕР№РєР° С†РІРµС‚Р° РёРЅС‚РµСЂС„РµР№СЃР° РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СѓРіСЂРѕР·С‹
+      Color status_color;
+      const char* status_text;
+
+      if (status == 3) {
+        status_color = Color(0xFF, 0x22, 0x22); // РЇСЂРєРёР№ РєСЂР°СЃРЅС‹Р№
+        status_text = "ALERT";
+      } else if (status == 2) {
+        status_color = Color(0xFF, 0x99, 0x00); // РћСЂР°РЅР¶РµРІС‹Р№
+        status_text = "WARNING";
+      } else if (status == 1) {
+        status_color = Color(0x00, 0xCC, 0x44); // Р—РµР»С‘РЅС‹Р№
+        status_text = "SAFE";
+      } else {
+        status_color = Color(0x77, 0x77, 0x77); // РЎРµСЂС‹Р№
+        status_text = "NO DATA";
+      }
+
+      // ==========================================
+      // РЎРўР РђРќРР¦Рђ 0: Р“Р›РђР’РќР«Р™ Р­РљР РђРќ Р РђР”РђР Рђ
+      // ==========================================
+      if (id(current_page) == 0) {
+
+        // РљСЂР°СЃРёРІР°СЏ С„РѕРЅРѕРІР°СЏ СЂР°РґР°СЂРЅР°СЏ СЃРµС‚РєР° (РїСЂРёРіР»СѓС€РµРЅРЅС‹Р№ С†РІРµС‚ СЃС‚Р°С‚СѓСЃР°)
+        Color grid_color = Color(status_color.red / 4, status_color.green / 4, status_color.blue / 4);
+        it.circle(160, -20, 140, grid_color);
+        it.circle(160, -20, 200, grid_color);
+
+        // РљСЂСѓРїРЅС‹Р№ СЃС‚Р°С‚СѓСЃ РїРѕе……РµРЅС‚СЂСѓ СЃРІРµСЂС…Сѓ
+        it.printf(160, 25, id(font_huge), status_color, TextAlign::CENTER, "%s", status_text);
+
+        // Р‘Р»РѕРє РІС‹РІРѕРґР° Р РµРіРёРѕРЅР° Рё РџСЂРёС‡РёРЅС‹ (Р‘Р•Р— РЅР°Р»РѕР¶РµРЅРёР№ РґСЂСѓРі РЅР° РґСЂСѓРіР°)
+        if (status >= 2 && !id(alert_reason).empty()) {
+          // Р•СЃР»Рё РµСЃС‚СЊ Р°РєС‚РёРІРЅР°СЏ СѓРіСЂРѕР·Р°: Р РµРіРёРѕРЅ РєСЂСѓРїРЅРѕ, Р° РїСЂРёС‡РёРЅР° РїРѕРґ РЅРёРј РЅР° РѕС‚РґРµР»СЊРЅРѕР№ СЃС‚СЂРѕРєРµ
+          it.printf(160, 75, id(font_large), Color::WHITE, TextAlign::CENTER, "%s", id(alert_region).c_str());
+          it.printf(160, 110, id(font_medium), status_color, TextAlign::CENTER, "[ %s ]", id(alert_reason).c_str());
+        } else {
+          // Р•СЃР»Рё РІСЃС‘ СЃРїРѕРєРѕР№РЅРѕ: РїСЂРѕСЃС‚Рѕ РІС‹РІРѕРґРёРј Р РµРіРёРѕРЅ РїРѕ С†РµРЅС‚СЂСѓ
+          it.printf(160, 85, id(font_large), Color(0xBB, 0xBB, 0xBB), TextAlign::CENTER, "%s", id(alert_region).c_str());
+        }
+
+        // РўР°Р№РјРµСЂ Р°РєС‚РёРІРЅРѕСЃС‚Рё СЃС‚Р°С‚СѓСЃР° РЅР°Рґ РєРЅРѕРїРєР°РјРё
+        char time_buf[64];
+        if (time_since < 3600) {
+          snprintf(time_buf, sizeof(time_buf), "Active for: %lum %lus", time_since / 60, time_since % 60);
+        } else {
+          snprintf(time_buf, sizeof(time_buf), "Active for: %lu hours", time_since / 3600);
+        }
+        it.printf(160, 165, id(font_tiny), Color(0x66, 0x66, 0x66), TextAlign::CENTER, "%s", time_buf);
+      }
+
+      // ==========================================
+      // РЎРўР РђРќРР¦Рђ 1: Р­РљР РђРќ РџРћР“РћР”Р«
+      // ==========================================
+      else if (id(current_page) == 1) {
+        // РљСЂР°СЃРёРІС‹Р№ Р·Р°РіРѕР»РѕРІРѕРє СЌРєСЂР°РЅР°
+        it.printf(160, 20, id(font_large), Color(0x44, 0xAA, 0xFF), TextAlign::CENTER, "WEATHER FORECAST");
+
+        if (id(cur_temp) > -50) {
+          // РљСЂСѓРїРЅР°СЏ С‚РµРјРїРµСЂР°С‚СѓСЂР°
+          it.printf(160, 55, id(font_xlarge), Color::WHITE, TextAlign::CENTER, "%.1fВ°C", id(cur_temp));
+          // Р’Р»Р°Р¶РЅРѕСЃС‚СЊ
+          it.printf(160, 110, id(font_medium), Color(0xBB, 0xBB, 0xBB), TextAlign::CENTER, "Humidity: %d%%", id(cur_hum));
+          // РўРµРєСЃС‚РѕРІРѕРµ РѕРїРёСЃР°РЅРёРµ (РћР±Р»Р°С‡РЅРѕ/РџР°СЃРјСѓСЂРЅРѕ Рё С‚.Рґ.)
+          it.printf(160, 140, id(font_medium), status_color, TextAlign::CENTER, "%s", id(weather_desc).c_str());
+        } else {
+          it.printf(160, 90, id(font_medium), Color(0x66, 0x66, 0x66), TextAlign::CENTER, "No data from MQTT...");
+        }
+      }
+
+      // ==========================================
+      // РќРР–РќРР• РљРќРћРџРљР (РЎС‚СЂРѕРіРёР№ РјР°СЃС€С‚Р°Р±, X РІ РїСЂРµРґРµР»Р°С… 0-320, Y РІ РїСЂРµРґРµР»Р°С… 0-240)
+      // ==========================================
+
+      // Р›Р•Р’РђРЇ РљРќРћРџРљРђ (Р’РєР»Р°РґРєРё): РљРѕРѕСЂРґРёРЅР°С‚С‹ X: 15->145, Y: 195->230 (РЁРёСЂРёРЅР°=130, Р’С‹СЃРѕС‚Р°=35)
+      it.filled_rectangle(15, 195, 130, 35, Color(0x11, 0x25, 0x33));
+      it.rectangle(15, 195, 130, 35, Color(0x33, 0x77, 0xAA));
+
+      if (id(current_page) == 0) {
+        it.printf(80, 212, id(font_button), Color(0x55, 0xCC, 0xFF), TextAlign::CENTER, "SEE WEATHER");
+      } else {
+        it.printf(80, 212, id(font_button), Color(0x55, 0xCC, 0xFF), TextAlign::CENTER, "SEE RADAR");
+      }
+
+      // РџР РђР’РђРЇ РљРќРћРџРљРђ (CALL): РљРѕРѕСЂРґРёРЅР°С‚С‹ X: 175->305, Y: 195->230 (РЁРёСЂРёРЅР°=130, Р’С‹СЃРѕС‚Р°=35)
+      it.filled_rectangle(175, 195, 130, 35, Color(0x33, 0x1A, 0x00));
+      it.rectangle(175, 195, 130, 35, Color(0xAA, 0x66, 0x00));
+      it.printf(240, 212, id(font_button), Color(0xFF, 0xAA, 0x22), TextAlign::CENTER, "CALL");
+
+# РЈРїСЂР°РІР»РµРЅРёРµ РїРѕРґСЃРІРµС‚РєРѕР№
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Display Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
+    default_transition_length: 500ms
+
+# РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Рµ С€СЂРёС„С‚С‹ Roboto
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 900
+    id: font_huge
+    size: 38
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_xlarge
+    size: 34
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_large
+    size: 24
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_medium
+    size: 18
+
+  - platform: gfonts
+    file: Roboto
+    weight: 700
+    id: font_button
+    size: 14 # РЈРјРµРЅСЊС€РµРЅ, С‡С‚РѕР±С‹ РґР»РёРЅРЅС‹Р№ С‚РµРєСЃС‚ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ РІР»РµР·Р°Р» РІ СЂР°РјРєРё РєРЅРѕРїРѕРє
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_tiny
+    size: 12
+
+# РРЅС‚РµСЂРІР°Р» Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РІРѕР·РІСЂР°С‚Р° РЅР° РіР»Р°РІРЅС‹Р№ СЌРєСЂР°РЅ
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          // Р•СЃР»Рё РѕС‚РєСЂС‹С‚Р° РїРѕРіРѕРґР° Рё СЌРєСЂР°РЅ РЅРёРєС‚Рѕ РЅРµ С‚СЂРѕРіР°Р» Р±РѕР»СЊС€Рµ 15 СЃРµРєСѓРЅРґ вЂ” СЃР±СЂР°СЃС‹РІР°РµРј РЅР° СЂР°РґР°СЂ
+          if (id(current_page) != 0 && (millis() - id(auto_return_timer) > 15000)) {
+            id(current_page) = 0;
+          }
+
+# Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ СЃРёСЃС‚РµРјС‹
+globals:
+  - id: alert_status
+    type: int
+    restore_value: no
+    initial_value: '1'
+  - id: alert_reason
+    type: std::string
+    restore_value: no
+    initial_value: '""'
+  - id: alert_region
+    type: std::string
+    restore_value: no
+    initial_value: '"Kyiv"'
+  - id: alert_changed
+    type: unsigned long
+    restore_value: no
+    initial_value: '0'
+
+  # РџРµСЂРµРјРµРЅРЅР°СЏ СЃС‚СЂР°РЅРёС†: 0 - Р Р°РґР°СЂ, 1 - РџРѕРіРѕРґР°
+  - id: current_page
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # РњРµС‚РµРѕРґР°РЅРЅС‹Рµ
+  - id: cur_temp
+    type: float
+    restore_value: no
+    initial_value: '-99'
+  - id: cur_hum
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: weather_desc
+    type: std::string
+    restore_value: no
+    initial_value: '"Loading..."'
+  - id: auto_return_timer
+    type: unsigned long
+    restore_value: no
+    initial_value: '0'
+
+# РЎРёСЃС‚РµРјРЅС‹Рµ Р±РёРЅР°СЂРЅС‹Рµ РґР°С‚С‡РёРєРё
+binary_sensor:
+  - platform: status
+    name: "Status"
+    id: device_status
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s

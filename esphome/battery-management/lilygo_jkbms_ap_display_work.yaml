@@ -1,0 +1,383 @@
+# LilyGO JK-BMS AP РґРёСЃРїР»РµР№
+
+substitutions:
+  name: jk-bms
+  device_description: "JK BMS BLE monitor_2"
+  external_components_source: .esphome/external_components/beb5e5d2/components
+  protocol_version: JK02_24S
+
+esphome:
+  name: ${name}
+  comment: ${device_description}
+  min_version: 2024.6.0
+
+esp32:
+  board: lolin32
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+external_components:
+  - source:
+      type: local
+      path: ${external_components_source}
+    refresh: 0s
+
+preferences:
+  flash_write_interval: 5s
+
+logger:
+  level: INFO
+  baud_rate: 115200
+
+wifi:
+  ap:
+    ssid: "JK-BMS-Setup"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+text:
+  - platform: template
+    name: "BMS MAC Address"
+    id: bms_mac_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "C8:47:80:24:79:02"
+    entity_category: config
+    icon: mdi:bluetooth
+
+  - platform: template
+    name: "MQTT Broker"
+    id: mqtt_broker_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "192.168.1.100"
+    entity_category: config
+    icon: mdi:server
+
+  - platform: template
+    name: "MQTT Username"
+    id: mqtt_user_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    entity_category: config
+    icon: mdi:account
+
+  - platform: template
+    name: "MQTT Password"
+    id: mqtt_pass_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: ""
+    entity_category: config
+    icon: mdi:lock
+
+  - platform: template
+    name: "MQTT Topic Prefix"
+    id: mqtt_topic_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "jk_bms_invertor"
+    entity_category: config
+    icon: mdi:tag
+
+  - platform: template
+    name: "Cell Count"
+    id: cell_count_text
+    mode: text
+    optimistic: true
+    restore_value: true
+    initial_value: "4"
+    entity_category: config
+    icon: mdi:battery-plus
+    on_value:
+      then:
+        - lambda: |-
+            int n = atoi(x.c_str());
+            if (n < 1)  n = 1;
+            if (n > 24) n = 24;
+            id(cell_count) = n;
+
+mqtt:
+  broker: !secret mqtt_host
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: "jk_bms_invertor"
+  discovery: false
+  on_connect:
+    - logger.log: "MQTT connected"
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+
+ble_client:
+  - mac_address: C8:47:80:24:79:02
+    id: client0
+
+jk_bms_ble:
+  - id: bms_ble
+    ble_client_id: client0
+    protocol_version: ${protocol_version}
+    throttle: 30s
+
+sensor:
+  - platform: jk_bms_ble
+    jk_bms_ble_id: bms_ble
+    total_voltage:
+      name: "${name} total voltage"
+      id: total_voltage
+    current:
+      name: "${name} current"
+      id: current
+    power:
+      name: "${name} power"
+      id: power
+    cell_voltage_1:
+      id: cell1
+      name: "${name} cell 1"
+    cell_voltage_2:
+      id: cell2
+      name: "${name} cell 2"
+    cell_voltage_3:
+      id: cell3
+      name: "${name} cell 3"
+    cell_voltage_4:
+      id: cell4
+      name: "${name} cell 4"
+    cell_voltage_5:
+      id: cell5
+      name: "${name} cell 5"
+    cell_voltage_6:
+      id: cell6
+      name: "${name} cell 6"
+    cell_voltage_7:
+      id: cell7
+      name: "${name} cell 7"
+    cell_voltage_8:
+      id: cell8
+      name: "${name} cell 8"
+    cell_voltage_9:
+      id: cell9
+      name: "${name} cell 9"
+    cell_voltage_10:
+      id: cell10
+      name: "${name} cell 10"
+    cell_voltage_11:
+      id: cell11
+      name: "${name} cell 11"
+    cell_voltage_12:
+      id: cell12
+      name: "${name} cell 12"
+    cell_voltage_13:
+      id: cell13
+      name: "${name} cell 13"
+    cell_voltage_14:
+      id: cell14
+      name: "${name} cell 14"
+    cell_voltage_15:
+      id: cell15
+      name: "${name} cell 15"
+    cell_voltage_16:
+      id: cell16
+      name: "${name} cell 16"
+    cell_voltage_17:
+      id: cell17
+      name: "${name} cell 17"
+    cell_voltage_18:
+      id: cell18
+      name: "${name} cell 18"
+    cell_voltage_19:
+      id: cell19
+      name: "${name} cell 19"
+    cell_voltage_20:
+      id: cell20
+      name: "${name} cell 20"
+    cell_voltage_21:
+      id: cell21
+      name: "${name} cell 21"
+    cell_voltage_22:
+      id: cell22
+      name: "${name} cell 22"
+    cell_voltage_23:
+      id: cell23
+      name: "${name} cell 23"
+    cell_voltage_24:
+      id: cell24
+      name: "${name} cell 24"
+    cell_voltage_25:
+      id: cell25
+      name: "${name} cell 25"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "${name} IP"
+      id: wifi_ip
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Reset Button"
+    id: reset_button
+    filters:
+      - delayed_on: 3000ms
+    on_press:
+      then:
+        - logger.log: "BOOT held 3s вЂ” clearing WiFi, restarting..."
+        - lambda: |-
+            id(wifi_reset_flag) = true;
+        - delay: 2s
+        - lambda: |-
+            global_preferences->reset();
+        - delay: 200ms
+        - button.press: restart_btn
+
+button:
+  - platform: restart
+    name: "Restart"
+    id: restart_btn
+    entity_category: diagnostic
+
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO19
+
+output:
+  - platform: ledc
+    pin: GPIO15
+    id: tft_backlight
+    frequency: 1000 Hz
+    inverted: false
+
+light:
+  - platform: monochromatic
+    output: tft_backlight
+    name: "Backlight"
+    restore_mode: ALWAYS_ON
+
+font:
+  - file: "gfonts://Roboto@700"
+    id: font_big
+    size: 30
+
+  - file: "gfonts://Roboto@700"
+    id: font_small
+    size: 18
+
+globals:
+  - id: screen_page
+    type: int
+    initial_value: '0'
+
+  - id: cell_count
+    type: int
+    initial_value: '4'
+
+  - id: wifi_reset_flag
+    type: bool
+    initial_value: 'false'
+
+interval:
+  - interval: 5s
+    then:
+      - lambda: |-
+          if (id(wifi_reset_flag)) return;
+          int total_pages = 3 + id(cell_count) + 1;
+          id(screen_page) = (id(screen_page) + 1) % total_pages;
+
+display:
+  - platform: st7789v
+    model: TTGO TDisplay 135x240
+    cs_pin: GPIO5
+    dc_pin: GPIO16
+    reset_pin: GPIO23
+    rotation: 90
+    update_interval: 5s
+    eightbitcolor: true
+    lambda: |-
+      it.fill(Color::BLACK);
+
+      if (id(wifi_reset_flag)) {
+        it.printf(110, 50, id(font_small), TextAlign::CENTER, "WiFi reset...");
+        it.printf(110, 90, id(font_small), TextAlign::CENTER, "Restarting...");
+        return;
+      }
+
+      int n = id(cell_count);
+      int ip_page = 3 + n;
+
+      if (id(screen_page) == ip_page) {
+        it.printf(110, 30, id(font_small), TextAlign::CENTER, "Web setup:");
+        it.printf(110, 75, id(font_big),   TextAlign::CENTER, "%s", id(wifi_ip).state.c_str());
+        it.printf(110, 115, id(font_small), TextAlign::CENTER, "port 80");
+        return;
+      }
+
+      const char* label  = "";
+      float       value  = 0.0f;
+      const char* format = "";
+
+      int page = id(screen_page);
+
+      if (page == 0) {
+        label = "U"; value = id(total_voltage).state; format = "%.2f V";
+      } else if (page == 1) {
+        label = "I"; value = id(current).state;       format = "%.1f A";
+      } else if (page == 2) {
+        label = "P"; value = id(power).state;         format = "%.0f W";
+      } else {
+        int cell_idx = page - 3 + 1;
+        char cell_label[20];
+        snprintf(cell_label, sizeof(cell_label), "Cell %hhu", (unsigned char)cell_idx);
+        label = cell_label;
+        format = "%.3f V";
+        switch (cell_idx) {
+          case  1: value = id(cell1).state;  break;
+          case  2: value = id(cell2).state;  break;
+          case  3: value = id(cell3).state;  break;
+          case  4: value = id(cell4).state;  break;
+          case  5: value = id(cell5).state;  break;
+          case  6: value = id(cell6).state;  break;
+          case  7: value = id(cell7).state;  break;
+          case  8: value = id(cell8).state;  break;
+          case  9: value = id(cell9).state;  break;
+          case 10: value = id(cell10).state; break;
+          case 11: value = id(cell11).state; break;
+          case 12: value = id(cell12).state; break;
+          case 13: value = id(cell13).state; break;
+          case 14: value = id(cell14).state; break;
+          case 15: value = id(cell15).state; break;
+          case 16: value = id(cell16).state; break;
+          case 17: value = id(cell17).state; break;
+          case 18: value = id(cell18).state; break;
+          case 19: value = id(cell19).state; break;
+          case 20: value = id(cell20).state; break;
+          case 21: value = id(cell21).state; break;
+          case 22: value = id(cell22).state; break;
+          case 23: value = id(cell23).state; break;
+          case 24: value = id(cell24).state; break;
+          case 25: value = id(cell25).state; break;
+          default: value = NAN; break;
+        }
+      }
+
+      it.printf(110, 40,  id(font_big), TextAlign::CENTER, label);
+      if (isnan(value)) {
+        it.printf(110, 100, id(font_big), TextAlign::CENTER, "---");
+      } else {
+        it.printf(110, 100, id(font_big), TextAlign::CENTER, format, value);
+      }

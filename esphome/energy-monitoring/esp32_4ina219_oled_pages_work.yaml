@@ -1,0 +1,227 @@
+# ESP32 + 4INA219 + OLED, СЃС‚СЂР°РЅРёС†С‹ СЂР°Р±РѕС‡РµРіРѕ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+
+esphome:
+  name: bms-monitor-esp32
+  friendly_name: "BMS_mon_4S"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+ethernet:
+  type: W5500
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+  cs_pin: GPIO5
+  manual_ip:
+    static_ip: 192.168.249.31
+    gateway: 192.168.249.1
+    subnet: 255.255.255.0
+
+i2c:
+  sda: GPIO21
+  scl: GPIO22
+  scan: true
+  frequency: 400kHz
+
+mqtt:
+  broker: !secret mqtt_host_legacy
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: esphome/4ina219_monitor
+
+font:
+  - file: "gfonts://Roboto Condensed"
+    id: font_big
+    size: 22
+
+  - file: "gfonts://Roboto Condensed"
+    id: font_med
+    size: 16
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    rotation: 180
+    address: 0x3C
+    id: oled_display
+    update_interval: never
+
+    pages:
+      - id: page_cell1
+        lambda: |-
+          it.print(0, 0, id(font_med), TextAlign::LEFT, "Cell 1");
+          it.printf(0, 20, id(font_big), TextAlign::LEFT, "%.3f V", id(cell1_v).state);
+
+      - id: page_cell2
+        lambda: |-
+          it.print(0, 0, id(font_med), TextAlign::LEFT, "Cell 2");
+          it.printf(0, 20, id(font_big), TextAlign::LEFT, "%.3f V", id(cell2_v).state);
+
+      - id: page_cell3
+        lambda: |-
+          it.print(0, 0, id(font_med), TextAlign::LEFT, "Cell 3");
+          it.printf(0, 20, id(font_big), TextAlign::LEFT, "%.3f V", id(cell3_v).state);
+
+      - id: page_cell4
+        lambda: |-
+          it.print(0, 0, id(font_med), TextAlign::LEFT, "Cell 4");
+          it.printf(0, 20, id(font_big), TextAlign::LEFT, "%.3f V", id(cell4_v).state);
+
+      - id: page_total
+        lambda: |-
+          it.print(0, 0, id(font_med), TextAlign::LEFT, "Total / Current");
+          it.printf(0, 18, id(font_med), TextAlign::LEFT, "%.2f V", id(total_v).state);
+          it.printf(0, 36, id(font_med), TextAlign::LEFT, "%.2f A", id(battery_current).state);
+
+interval:
+  - interval: 3s
+    then:
+      - display.page.show_next: oled_display
+      - component.update: oled_display
+
+sensor:
+  - platform: ina219
+    address: 0x40
+    shunt_resistance: 0.1 ohm
+    max_voltage: 32.0V
+    max_current: 10.0A
+    update_interval: 2s
+    bus_voltage:
+      id: raw_v1
+      internal: true
+    current:
+      id: raw_i1
+      name: "cell1_current"
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      icon: "mdi:current-dc"
+    power:
+      id: raw_p1
+      internal: true
+
+  - platform: ina219
+    address: 0x41
+    shunt_resistance: 0.1 ohm
+    max_voltage: 32.0V
+    max_current: 10.0A
+    update_interval: 2s
+    bus_voltage:
+      id: raw_v2
+      internal: true
+    current:
+      id: raw_i2
+      name: "cell2_current"
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      icon: "mdi:current-dc"
+    power:
+      id: raw_p2
+      internal: true
+
+  - platform: ina219
+    address: 0x44
+    shunt_resistance: 0.1 ohm
+    max_voltage: 32.0V
+    max_current: 10.0A
+    update_interval: 2s
+    bus_voltage:
+      id: raw_v3
+      internal: true
+    current:
+      id: raw_i3
+      name: "cell3_current"
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      icon: "mdi:current-dc"
+    power:
+      id: raw_p3
+      internal: true
+
+  - platform: ina219
+    address: 0x45
+    shunt_resistance: 0.1 ohm
+    max_voltage: 32.0V
+    max_current: 10.0A
+    update_interval: 2s
+    bus_voltage:
+      id: raw_v4
+      internal: true
+    current:
+      id: raw_i4
+      name: "cell4_current"
+      unit_of_measurement: "A"
+      accuracy_decimals: 3
+      icon: "mdi:current-dc"
+    power:
+      id: raw_p4
+      internal: true
+
+  - platform: template
+    name: "cell1_voltage"
+    id: cell1_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: 'return id(raw_v1).state;'
+    update_interval: 2s
+
+  - platform: template
+    name: "cell2_voltage"
+    id: cell2_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: 'return id(raw_v2).state - id(raw_v1).state;'
+    update_interval: 2s
+
+  - platform: template
+    name: "cell3_voltage"
+    id: cell3_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: 'return id(raw_v3).state - id(raw_v2).state;'
+    update_interval: 2s
+
+  - platform: template
+    name: "cell4_voltage"
+    id: cell4_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery"
+    lambda: 'return id(raw_v4).state - id(raw_v3).state;'
+    update_interval: 2s
+
+  - platform: template
+    name: "total_voltage"
+    id: total_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery-high"
+    lambda: 'return id(raw_v4).state;'
+    update_interval: 2s
+
+  - platform: template
+    name: "battery_current"
+    id: battery_current
+    unit_of_measurement: "A"
+    accuracy_decimals: 3
+    icon: "mdi:current-dc"
+    lambda: 'return id(raw_i1).state;'
+    update_interval: 2s
+
+web_server:
+  port: 80
+
+api:
+
+ota:
+  platform: esphome
+  password: !secret fallback_ap_password
