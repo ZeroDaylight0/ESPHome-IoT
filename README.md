@@ -45,6 +45,16 @@ Only selected working configurations are published. Local archives,
 experiments, Python services, generated ESPHome files and virtual
 environments are intentionally kept outside the public repository.
 
+Each project section has its own README with a configuration catalogue,
+pinout tables, interface notes, MQTT details and image placeholders:
+
+- [Energy monitoring](esphome/energy-monitoring/README.md)
+- [JK-BMS battery management](esphome/battery-management/README.md)
+- [Displays and dashboards](esphome/displays/README.md)
+- [Sensors and alerting](esphome/sensors/README.md)
+- [ESP32-CAM monitoring](esphome/camera/README.md)
+- [Networking and Ethernet](esphome/networking/README.md)
+
 ## Project catalogue
 
 ### Energy monitoring
