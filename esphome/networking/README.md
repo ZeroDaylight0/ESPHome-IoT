@@ -3,6 +3,9 @@
 Network-connected ESPHome examples combining MQTT with Ethernet, DHT11 and
 TTGO TFT hardware.
 
+Preview **ESP32-DHT-ETHERNET**
+![ESP32-dht-ethernet](esp32-dht-ethernet.png)
+
 ## Configurations
 
 | File | Board | Function |
