@@ -1,4 +1,4 @@
-# ESPHome IoT Portfolio
+﻿# ESPHome IoT Portfolio
 
 > Embedded monitoring, battery telemetry and visual dashboards built around
 > ESP32, ESPHome, MQTT and Home Assistant.
@@ -28,17 +28,17 @@ clear observability through MQTT, logs and web/API endpoints.
 
 ```text
 .
-├── esphome/
-│   ├── energy-monitoring/
-│   ├── battery-management/
-│   ├── displays/
-│   ├── sensors/
-│   ├── camera/
-│   ├── networking/
-│   └── assets/
-├── README.md
-├── .gitignore
-└── secrets.example.yaml
+в”њв”Ђв”Ђ esphome/
+в”‚   в”њв”Ђв”Ђ energy-monitoring/
+в”‚   в”њв”Ђв”Ђ battery-management/
+в”‚   в”њв”Ђв”Ђ displays/
+в”‚   в”њв”Ђв”Ђ sensors/
+в”‚   в”њв”Ђв”Ђ camera/
+в”‚   в”њв”Ђв”Ђ networking/
+в”‚   в””в”Ђв”Ђ assets/
+в”њв”Ђв”Ђ README.md
+в”њв”Ђв”Ђ .gitignore
+в””в”Ђв”Ђ secrets.example.yaml
 ```
 
 Only selected working configurations are published. Local archives,
@@ -46,7 +46,7 @@ experiments, Python services, generated ESPHome files and virtual
 environments are intentionally kept outside the public repository.
 
 Each project section has its own README with a configuration catalogue,
-pinout tables, interface notes, MQTT details and image placeholders:
+pinout tables, interface notes and MQTT details:
 
 - [Energy monitoring](esphome/energy-monitoring/README.md)
 - [JK-BMS battery management](esphome/battery-management/README.md)
@@ -62,7 +62,7 @@ pinout tables, interface notes, MQTT details and image placeholders:
 | Configuration | Board | Interfaces and role |
 |---|---|---|
 | [`esp32_4ina219_mqtt_work.yaml`](esphome/energy-monitoring/esp32_4ina219_mqtt_work.yaml) | ESP32 DevKit | ADS1115, I2C on GPIO19/GPIO22, MQTT topic prefix `esphome/ads1115_4cell`, SH1106 OLED |
-| [`esp32_4ina219_oled_pages_work.yaml`](esphome/energy-monitoring/esp32_4ina219_oled_pages_work.yaml) | ESP32 DevKit | SPI display, I2C on GPIO21/GPIO22, four I2C sensor addresses `0x40`–`0x45`, MQTT `esphome/4ina219_monitor` |
+| [`esp32_4ina219_oled_pages_work.yaml`](esphome/energy-monitoring/esp32_4ina219_oled_pages_work.yaml) | ESP32 DevKit | SPI display, I2C on GPIO21/GPIO22, four I2C sensor addresses `0x40`вЂ“`0x45`, MQTT `esphome/4ina219_monitor` |
 | [`esp32_ads1115_acs115_4s_display_work.yaml`](esphome/energy-monitoring/esp32_ads1115_acs115_4s_display_work.yaml) | ESP32 DevKit | ADS1115, I2C GPIO21/GPIO22, SPI GPIO18/GPIO23/GPIO19/GPIO5, SH1106 OLED |
 | [`esp32_ads1115_acs115_4s_display_wifi_work.yaml`](esphome/energy-monitoring/esp32_ads1115_acs115_4s_display_wifi_work.yaml) | ESP32 DevKit | Wi-Fi variant, ADS1115, I2C GPIO19/GPIO22, SH1106 OLED |
 | [`esp32c6_4ina219_mqtt_base_work.yaml`](esphome/energy-monitoring/esp32c6_4ina219_mqtt_base_work.yaml) | ESP32-C6 | SPI GPIO7/GPIO6/GPIO5/GPIO4, I2C GPIO21/GPIO22, MQTT `esphome/4ina219_monitor` |
@@ -131,14 +131,14 @@ datasheet before applying power.
 
 ```text
 Sensors / JK-BMS / camera
-            │
-            ▼
+            в”‚
+            в–ј
          ESPHome
-      ┌─────┼─────┐
-      │     │     │
+      в”Њв”Ђв”Ђв”Ђв”Ђв”Ђв”јв”Ђв”Ђв”Ђв”Ђв”Ђв”ђ
+      в”‚     в”‚     в”‚
      API   MQTT  Web UI
-      │     │     │
-      ▼     ▼     ▼
+      в”‚     в”‚     в”‚
+      в–ј     в–ј     в–ј
  Home Assistant  Broker  Local diagnostics
 ```
 
@@ -243,3 +243,4 @@ For a production deployment, add:
 
 Unless stated otherwise in a project directory, this portfolio is released
 under the MIT License.
+
