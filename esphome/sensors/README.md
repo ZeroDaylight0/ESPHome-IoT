@@ -2,7 +2,7 @@
 
 Sensor nodes and visual alert dashboards for ESP32 and ESP32-C3.
 
-Preview
+Preview esp-alert
 ![ESP32-CYD Ukraine-alert](esp-alert.png)
 
 ## Configurations
