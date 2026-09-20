@@ -1,11 +1,7 @@
-# Energy monitoring
+﻿# Energy monitoring
 
 ESP32-based voltage and current monitoring with INA219-class sensors, ADS1115,
 OLED displays and MQTT telemetry.
-
-![Device photo placeholder](images/device-placeholder.svg)
-
-> Replace the placeholder with a photo of the assembled device.
 
 ## Configurations
 
@@ -19,8 +15,6 @@ OLED displays and MQTT telemetry.
 | `cyd_4ina219_mqtt_display_work.yaml` | ESP32 DevKit/CYD | ILI9341 SPI GPIO14/GPIO13/GPIO12, CS GPIO15, DC GPIO2 |
 
 ## Pinout
-
-![Wiring placeholder](images/wiring-placeholder.svg)
 
 | Bus | Pin | Purpose |
 |---|---:|---|
@@ -41,8 +35,4 @@ Common topic prefixes are `esphome/ads1115_4cell`,
 `esphome/ads1115_acs115_4cell` and `esphome/4ina219_monitor`.
 Several variants expose an OLED dashboard, ESPHome API, web server and OTA.
 
-## Images to replace
 
-- `images/device-placeholder.svg` - finished device photo.
-- `images/wiring-placeholder.svg` - verified wiring diagram.
-- `images/pinout-placeholder.svg` - annotated board pinout.

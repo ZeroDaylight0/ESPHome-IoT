@@ -1,9 +1,7 @@
-# ESP32-CAM MQTT monitoring
+﻿# ESP32-CAM MQTT monitoring
 
 Camera-oriented ESPHome configuration for meter monitoring and MQTT
 integration.
-
-![Device photo placeholder](images/device-placeholder.svg)
 
 ## Configuration
 
@@ -13,8 +11,6 @@ integration.
 
 ## Pinout
 
-![Wiring placeholder](images/wiring-placeholder.svg)
-
 | Signal | GPIO |
 |---|---:|
 | I2C SDA | GPIO26 |
@@ -23,8 +19,4 @@ integration.
 Camera module power, camera data pins and the exact sensor wiring must be
 documented from the physical board revision before publishing a final diagram.
 
-## Replace these placeholders
 
-- `images/device-placeholder.svg` - camera and meter installation photo.
-- `images/wiring-placeholder.svg` - camera/sensor wiring.
-- `images/pinout-placeholder.svg` - board-specific camera pinout.

@@ -1,9 +1,7 @@
-# JK-BMS battery management
+﻿# JK-BMS battery management
 
 ESPHome configurations for reading JK-BMS telemetry, publishing it to MQTT
 and displaying battery data on TFT panels.
-
-![Device photo placeholder](images/device-placeholder.svg)
 
 ## Configurations
 
@@ -14,8 +12,6 @@ and displaying battery data on TFT panels.
 | `lilygo_jkbms_ap_display_work.yaml` | Lolin32 | JK-BMS MQTT, TTGO T-Display |
 
 ## Full configured pinout
-
-![Wiring placeholder](images/wiring-placeholder.svg)
 
 | Interface | Pin | Purpose |
 |---|---:|---|
@@ -39,8 +35,4 @@ the BMS connector pinout and voltage levels before connecting.
 The primary topic prefixes are `jkbms_2_AP_cell` and `jk_bms_invertor`.
 MQTT credentials remain in local `secrets.yaml`.
 
-## Images to replace
 
-- `images/device-placeholder.svg` - assembled BMS monitor.
-- `images/wiring-placeholder.svg` - BMS-to-ESP32 wiring.
-- `images/pinout-placeholder.svg` - TFT and UART pinout.

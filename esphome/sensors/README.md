@@ -1,8 +1,6 @@
-# Sensors and alerting
+﻿# Sensors and alerting
 
 Sensor nodes and visual alert dashboards for ESP32 and ESP32-C3.
-
-![Device photo placeholder](images/device-placeholder.svg)
 
 ## Configurations
 
@@ -15,8 +13,6 @@ Sensor nodes and visual alert dashboards for ESP32 and ESP32-C3.
 | `weather_alert_display.yaml` | ESP32 DevKit | Weather alert display with SH1106 |
 
 ## Pinout
-
-![Wiring placeholder](images/wiring-placeholder.svg)
 
 | Interface | Pin | Purpose |
 |---|---:|---|
@@ -37,8 +33,4 @@ The OLED address used by the vibration configurations is `0x3C`.
 Topic prefixes include `vibration_sensor`, `vibration_hw483` and `esp`.
 Wi-Fi, MQTT and OTA secrets are never stored in these files.
 
-## Replace these placeholders
 
-- `images/device-placeholder.svg` - sensor enclosure photo.
-- `images/wiring-placeholder.svg` - sensor wiring diagram.
-- `images/pinout-placeholder.svg` - board and sensor pinout.
