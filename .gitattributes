@@ -1,2 +1,3 @@
-*.yaml linguist-language=YAML
-*.yml linguist-language=YAML
+*.yaml linguist-language=YAML linguist-detectable
+*.yml linguist-language=YAML linguist-detectable
+tools/*.ps1 linguist-vendored
