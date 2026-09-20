@@ -131,14 +131,14 @@ datasheet before applying power.
 
 ```text
 Sensors / JK-BMS / camera
-            в”‚
-            в–ј
+            |
+            v
          ESPHome
-      в”Њв”Ђв”Ђв”Ђв”Ђв”Ђв”јв”Ђв”Ђв”Ђв”Ђв”Ђв”ђ
-      в”‚     в”‚     в”‚
+      +-----+-----+-----+
+      |     |     |
      API   MQTT  Web UI
-      в”‚     в”‚     в”‚
-      в–ј     в–ј     в–ј
+      |     |     |
+      v     v     v
  Home Assistant  Broker  Local diagnostics
 ```
 
@@ -243,5 +243,6 @@ For a production deployment, add:
 
 Unless stated otherwise in a project directory, this portfolio is released
 under the MIT License.
+
 
 
