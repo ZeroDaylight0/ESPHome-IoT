@@ -3,6 +3,8 @@
 Camera-oriented ESPHome configuration for meter monitoring and MQTT
 integration.
 
+![ESP32 wiring diagram](esp32-cam.png)
+
 ## Configuration
 
 | File | Board | Interfaces |
