@@ -28,17 +28,17 @@ clear observability through MQTT, logs and web/API endpoints.
 
 ```text
 .
-в”њв”Ђв”Ђ esphome/
-в”‚   в”њв”Ђв”Ђ energy-monitoring/
-в”‚   в”њв”Ђв”Ђ battery-management/
-в”‚   в”њв”Ђв”Ђ displays/
-в”‚   в”њв”Ђв”Ђ sensors/
-в”‚   в”њв”Ђв”Ђ camera/
-в”‚   в”њв”Ђв”Ђ networking/
-в”‚   в””в”Ђв”Ђ assets/
-в”њв”Ђв”Ђ README.md
-в”њв”Ђв”Ђ .gitignore
-в””в”Ђв”Ђ secrets.example.yaml
+esphome/
+  energy-monitoring/
+  battery-management/
+  displays/
+  sensors/
+  camera/
+  networking/
+  assets/
+README.md
+.gitignore
+secrets.example.yaml
 ```
 
 Only selected working configurations are published. Local archives,
@@ -243,4 +243,5 @@ For a production deployment, add:
 
 Unless stated otherwise in a project directory, this portfolio is released
 under the MIT License.
+
 
