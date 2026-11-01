@@ -1,4 +1,4 @@
-# CYD BMS 4S СЃ INA219 Рё РѕС‚РѕР±СЂР°Р¶РµРЅРёРµРј С‡РµСЂРµР· MQTT
+# CYD BMS 4S with INA219 and MQTT display
 
 esphome:
   name: cyd-ina-display
@@ -151,28 +151,28 @@ display:
       char buf[32];
 
       if (!std::isnan(id(cell1_v).state) && id(raw_i1_str).has_state() && !id(raw_i1_str).state.empty()) {
-        snprintf(buf, sizeof(buf), "РЇС‡1: %.3fV  %.3fA", id(cell1_v).state, atof(id(raw_i1_str).state.c_str()));
+        snprintf(buf, sizeof(buf), "C1: %.3fV  %.3fA", id(cell1_v).state, atof(id(raw_i1_str).state.c_str()));
         it.print(10, 45, id(font_small), Color(0, 255, 0), TextAlign::TOP_LEFT, buf);
       } else {
         it.print(10, 45, id(font_small), Color(255, 0, 0), TextAlign::TOP_LEFT, "C1: ---V  ---A");
       }
 
       if (!std::isnan(id(cell2_v).state) && id(raw_i2_str).has_state() && !id(raw_i2_str).state.empty()) {
-        snprintf(buf, sizeof(buf), "РЇС‡2: %.3fV  %.3fA", id(cell2_v).state, atof(id(raw_i2_str).state.c_str()));
+        snprintf(buf, sizeof(buf), "C2: %.3fV  %.3fA", id(cell2_v).state, atof(id(raw_i2_str).state.c_str()));
         it.print(10, 75, id(font_small), Color(0, 255, 0), TextAlign::TOP_LEFT, buf);
       } else {
         it.print(10, 75, id(font_small), Color(255, 0, 0), TextAlign::TOP_LEFT, "C2: ---V  ---A");
       }
 
       if (!std::isnan(id(cell3_v).state) && id(raw_i3_str).has_state() && !id(raw_i3_str).state.empty()) {
-        snprintf(buf, sizeof(buf), "РЇС‡3: %.3fV  %.3fA", id(cell3_v).state, atof(id(raw_i3_str).state.c_str()));
+        snprintf(buf, sizeof(buf), "C3: %.3fV  %.3fA", id(cell3_v).state, atof(id(raw_i3_str).state.c_str()));
         it.print(10, 105, id(font_small), Color(0, 255, 0), TextAlign::TOP_LEFT, buf);
       } else {
         it.print(10, 105, id(font_small), Color(255, 0, 0), TextAlign::TOP_LEFT, "C3: ---V  ---A");
       }
 
       if (!std::isnan(id(cell4_v).state) && id(raw_i4_str).has_state() && !id(raw_i4_str).state.empty()) {
-        snprintf(buf, sizeof(buf), "РЇС‡4: %.3fV  %.3fA", id(cell4_v).state, atof(id(raw_i4_str).state.c_str()));
+        snprintf(buf, sizeof(buf), "C4: %.3fV  %.3fA", id(cell4_v).state, atof(id(raw_i4_str).state.c_str()));
         it.print(10, 135, id(font_small), Color(0, 255, 0), TextAlign::TOP_LEFT, buf);
       } else {
         it.print(10, 135, id(font_small), Color(255, 0, 0), TextAlign::TOP_LEFT, "C4: ---V  ---A");

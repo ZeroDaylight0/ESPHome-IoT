@@ -1,4 +1,4 @@
-# CYD РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РґР»СЏ JK-BMS СЃ MQTT Рё РґРёСЃРїР»РµРµРј
+# CYD configuration for JK-BMS with MQTT and a display
 
 esphome:
   name: cyd_jkbms_display
@@ -40,7 +40,7 @@ font:
   - file: "6320-font.ttf"
     id: font_big
     size: 23
-    glyphs: "0123456789.-+AVWUIBTNntaCВ°:% "
+    glyphs: "0123456789.-+AVWUIBTNntaC°:% "
 
 
 sensor:
@@ -96,7 +96,7 @@ sensor:
     name: "Battery Temp"
     id: battery_temp
     topic: "jk_bms_B1A8S10P/sensor/jk-bms-battery-temp/state"
-    unit_of_measurement: "В°C"
+    unit_of_measurement: "°C"
     accuracy_decimals: 1
 
 
@@ -115,12 +115,12 @@ display:
       width: 320
       height: 240
       offset_width: 0
-      offset_height: 0   # РџРѕРїСЂРѕР±СѓР№ 35 РёР»Рё 40, РµСЃР»Рё РµСЃС‚СЊ Р°СЂС‚РµС„Р°РєС‚С‹ СЃРїСЂР°РІР°
+      offset_height: 0   # Try 35 or 40 if you see artifacts on the right
 
     lambda: |-
       it.printf(10, 25,  id(font_big), Color(0x00FF00), "U: %.2f V", id(total_voltage).state);
       it.printf(10, 85,  id(font_big), Color(0x00FFFF), "I: %.1f A", id(current).state);
-      it.printf(10, 145, id(font_big), Color(0x00FFFF), "Bat: %.1fВ°C", id(battery_temp).state);
+      it.printf(10, 145, id(font_big), Color(0x00FFFF), "Bat: %.1f°C", id(battery_temp).state);
 
       it.printf(it.get_width() - 10, 25,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C1: %.3f V", id(cell1).state);
       it.printf(it.get_width() - 10, 85,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C2: %.3f V", id(cell2).state);

@@ -1,4 +1,4 @@
-# JK-BMS UART AP TFT РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ
+# JK-BMS UART AP TFT configuration
 
 esphome:
   name: testtftbms

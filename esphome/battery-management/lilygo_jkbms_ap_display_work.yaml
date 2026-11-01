@@ -1,4 +1,4 @@
-# LilyGO JK-BMS AP РґРёСЃРїР»РµР№
+# LilyGO JK-BMS AP display
 
 substitutions:
   name: jk-bms
@@ -237,7 +237,7 @@ binary_sensor:
       - delayed_on: 3000ms
     on_press:
       then:
-        - logger.log: "BOOT held 3s вЂ” clearing WiFi, restarting..."
+        - logger.log: "BOOT held 3s — clearing WiFi, restarting..."
         - lambda: |-
             id(wifi_reset_flag) = true;
         - delay: 2s

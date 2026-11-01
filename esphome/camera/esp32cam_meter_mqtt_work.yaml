@@ -1,4 +1,4 @@
-# ESP32-CAM СЃС‡С‘С‚С‡РёРє СЃ MQTT
+# ESP32-CAM meter reader with MQTT
 
 substitutions:
   device_name: "esp32cam-meter"
@@ -15,7 +15,7 @@ esphome:
   on_boot:
     priority: -100
     then:
-      - logger.log: "РїРµСЂРІС‹Р№ СЃРЅРёРјРѕРє С‡РµСЂРµР· 5 СЃРµРєСѓРЅРґ"
+      - logger.log: "first snapshot in 5 seconds"
       - delay: 5s
       - script.execute: take_photo
 
@@ -80,7 +80,7 @@ mqtt:
     - topic: meter/cmd
       payload: "capture"
       then:
-        - logger.log: "РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° СЃРЅРёРјРєР°"
+        - logger.log: "Snapshot command received"
         - script.execute: take_photo
 
 esp32_camera:
@@ -118,22 +118,22 @@ esp32_camera:
     - script.stop: flash_failsafe_off
     - light.turn_off:
         id: flash_light
-    - logger.log: "РљР°РґСЂ РїРѕР»СѓС‡РµРЅ, РІСЃРїС‹С€РєР° РІС‹РєР»СЋС‡РµРЅР°"
+    - logger.log: "Frame captured, flash off"
     - lambda: |-
         if (!id(mqtt_client).is_connected()) {
-          ESP_LOGE("meter", "MQTT РЅРµ РїРѕРґРєР»СЋС‡РµРЅ, С„РѕС‚Рѕ РЅРµ Р±СѓРґРµС‚ РѕС‚РїСЂР°РІР»РµРЅРѕ");
+          ESP_LOGE("meter", "MQTT is not connected, the photo will not be sent");
           id(mqtt_client).publish("meter/status", "mqtt_not_connected");
           return;
         }
 
         auto encoded = esphome::base64_encode(image.data, image.length);
         if (id(mqtt_client).publish("meter/image", encoded)) {
-          ESP_LOGI("meter", "Р¤РѕС‚Рѕ РѕС‚РїСЂР°РІР»РµРЅРѕ (%u Р±Р°Р№С‚ JPEG, %u Р±Р°Р№С‚ base64)",
+          ESP_LOGI("meter", "Photo sent (%u bytes JPEG, %u bytes base64)",
                    static_cast<unsigned int>(image.length),
                    static_cast<unsigned int>(encoded.size()));
           id(mqtt_client).publish("meter/status", "photo_sent");
         } else {
-          ESP_LOGE("meter", "MQTT publish РІРµСЂРЅСѓР» false");
+          ESP_LOGE("meter", "MQTT publish returned false");
           id(mqtt_client).publish("meter/status", "publish_error");
         }
 
@@ -164,7 +164,7 @@ sensor:
   - platform: template
     name: "${friendly_name} Last Value"
     id: meter_last_value
-    unit_of_measurement: "mВі"
+    unit_of_measurement: "m³"
     accuracy_decimals: 3
     icon: mdi:counter
 
@@ -181,7 +181,7 @@ button:
   - platform: template
     name: "${friendly_name} Manual Capture"
     on_press:
-      - logger.log: "Р СѓС‡РЅРѕР№ СЃРЅРёРјРѕРє РёР· РІРµР±-РёРЅС‚РµСЂС„РµР№СЃР°"
+      - logger.log: "Manual snapshot from the web UI"
       - script.execute: take_photo
 
 script:
@@ -191,22 +191,22 @@ script:
       - delay: ${flash_timeout}
       - light.turn_off:
           id: flash_light
-      - logger.log: "Р’СЃРїС‹С€РєР° РІС‹РєР»СЋС‡РµРЅР° РїРѕ С‚Р°Р№РјР°СѓС‚Сѓ"
+      - logger.log: "Flash turned off by timeout"
 
   - id: take_photo
     mode: single
     then:
-      - logger.log: "Р’РєР»СЋС‡Р°РµРј РІСЃРїС‹С€РєСѓ Рё Р·Р°РїСЂР°С€РёРІР°РµРј РєР°РґСЂ"
+      - logger.log: "Turning on the flash and requesting a frame"
       - script.stop: flash_failsafe_off
       - light.turn_on:
           id: flash_light
           brightness: 100%
       - delay: ${flash_duration}
-      - logger.log: "Р—Р°РїСЂР°С€РёРІР°РµРј РєР°РґСЂ"
+      - logger.log: "Requesting a frame"
       - lambda: |-
           id(my_camera).request_image(esphome::esp32_camera::CameraRequester::API_REQUESTER);
       - script.execute: flash_failsafe_off
-      - logger.log: "РЎРЅРёРјРѕРє Р·Р°РїСЂРѕС€РµРЅ"
+      - logger.log: "Snapshot requested"
 
 interval:
   - interval: ${capture_interval}

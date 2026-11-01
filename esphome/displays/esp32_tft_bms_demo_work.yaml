@@ -1,8 +1,8 @@
-# ESP32 TFT BMS demo СЂР°Р±РѕС‡РёР№ РєРѕРЅС„РёРі
+# ESP32 TFT BMS demo, working config
 
 esphome:
   name: esp32_2432s028_display_test
-  comment: "ILI9341 TFT test вЂ“ cells, voltage, current"
+  comment: "ILI9341 TFT test – cells, voltage, current"
 
 esp32:
   board: esp32dev
@@ -124,12 +124,12 @@ display:
       offset_height: 0
 
     lambda: |-
-      // РћР±С‰РµРµ РЅР°РїСЂСЏР¶РµРЅРёРµ Рё С‚РѕРє СЃР»РµРІР° (Р±РѕР»СЊС€РёРµ)
+      // Total voltage and current on the left (large)
       it.printf(10, 20, id(font_big), Color(0x00FF00), "U: %.2f V", id(total_voltage).state);
       it.printf(10, 70, id(font_big), Color(0x00FFFF), "I: %.1f A", id(current).state);
 
-      // РЇС‡РµР№РєРё СЃРїСЂР°РІР°, РЅР° СѓСЂРѕРІРЅРµ U Рё I (РІС‹СЂР°РІРЅРёРІР°РЅРёРµ РїРѕ РїСЂР°РІРѕРјСѓ РєСЂР°СЋ)
-      // РћС‚СЃС‚СѓРї СЃРїСЂР°РІР° ~10 px
+      // Cells on the right, level with U and I (right-aligned)
+      // ~10 px right margin
       it.printf(it.get_width() - 10, 20,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C1: %.3f V", id(cell1).state);
       it.printf(it.get_width() - 10, 70,  id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C2: %.3f V", id(cell2).state);
       it.printf(it.get_width() - 10, 120, id(font_big), Color(0xFFFFFF), TextAlign::TOP_RIGHT, "C3: %.3f V", id(cell3).state);

@@ -1,4 +1,4 @@
-# ESP32 + 4INA219 + OLED, СЃС‚СЂР°РЅРёС†С‹ СЂР°Р±РѕС‡РµРіРѕ РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+# ESP32 + 4INA219 + OLED, paged working config
 
 esphome:
   name: bms-monitor-esp32

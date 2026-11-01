@@ -1,4 +1,9 @@
-﻿# ESPHome IoT Portfolio
+# ESPHome IoT Portfolio
+
+![ESPHome](https://img.shields.io/badge/ESPHome-YAML-000000?logo=esphome&logoColor=white)
+![ESP32](https://img.shields.io/badge/ESP32-C3_%C2%B7_C6_%C2%B7_CAM-E7352C?logo=espressif&logoColor=white)
+![MQTT](https://img.shields.io/badge/MQTT-Home_Assistant-660066?logo=mqtt&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > Embedded monitoring, battery telemetry and visual dashboards built around
 > ESP32, ESPHome, MQTT and Home Assistant.
@@ -62,7 +67,7 @@ pinout tables, interface notes and MQTT details:
 | Configuration | Board | Interfaces and role |
 |---|---|---|
 | [`esp32_4ina219_mqtt_work.yaml`](esphome/energy-monitoring/esp32_4ina219_mqtt_work.yaml) | ESP32 DevKit | ADS1115, I2C on GPIO19/GPIO22, MQTT topic prefix `esphome/ads1115_4cell`, SH1106 OLED |
-| [`esp32_4ina219_oled_pages_work.yaml`](esphome/energy-monitoring/esp32_4ina219_oled_pages_work.yaml) | ESP32 DevKit | SPI display, I2C on GPIO21/GPIO22, four I2C sensor addresses `0x40`вЂ“`0x45`, MQTT `esphome/4ina219_monitor` |
+| [`esp32_4ina219_oled_pages_work.yaml`](esphome/energy-monitoring/esp32_4ina219_oled_pages_work.yaml) | ESP32 DevKit | SPI display, I2C on GPIO21/GPIO22, four I2C sensor addresses `0x40`–`0x45`, MQTT `esphome/4ina219_monitor` |
 | [`esp32_ads1115_acs115_4s_display_work.yaml`](esphome/energy-monitoring/esp32_ads1115_acs115_4s_display_work.yaml) | ESP32 DevKit | ADS1115, I2C GPIO21/GPIO22, SPI GPIO18/GPIO23/GPIO19/GPIO5, SH1106 OLED |
 | [`esp32_ads1115_acs115_4s_display_wifi_work.yaml`](esphome/energy-monitoring/esp32_ads1115_acs115_4s_display_wifi_work.yaml) | ESP32 DevKit | Wi-Fi variant, ADS1115, I2C GPIO19/GPIO22, SH1106 OLED |
 | [`esp32c6_4ina219_mqtt_base_work.yaml`](esphome/energy-monitoring/esp32c6_4ina219_mqtt_base_work.yaml) | ESP32-C6 | SPI GPIO7/GPIO6/GPIO5/GPIO4, I2C GPIO21/GPIO22, MQTT `esphome/4ina219_monitor` |
@@ -241,8 +246,5 @@ For a production deployment, add:
 
 ## License
 
-Unless stated otherwise in a project directory, this portfolio is released
-under the MIT License.
-
-
-
+The configurations and documentation are released under the [MIT License](LICENSE).
+Bundled font files (`*.ttf`) keep the license of their original authors.

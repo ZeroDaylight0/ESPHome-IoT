@@ -1,4 +1,4 @@
-# Lightcheck TFT СЃ MQTT
+# Lightcheck TFT with MQTT
 
 esphome:
   name: lightcheck
@@ -34,7 +34,7 @@ display:
     dc_pin: GPIO16
     reset_pin: GPIO23
     backlight_pin: GPIO4
-    rotation: 270В°
+    rotation: 270°
     lambda: |-
       it.fill(Color(0x00, 0x00, 0x00));
 

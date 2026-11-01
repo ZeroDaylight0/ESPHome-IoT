@@ -1,7 +1,7 @@
 substitutions:
   device_name: esp32-ads1115-4cell-wifi
   friendly_name: "ADS1115 4S Voltmeter"
-  # РљРѕСЌС„С„РёС†РёРµРЅС‚С‹ РґРµР»РёС‚РµР»РµР№ (РїРѕРґРїСЂР°РІСЊ РёС…, РµСЃР»Рё СЂРµР°Р»СЊРЅС‹Рµ РІРѕР»СЊС‚С‹ Р±СѓРґСѓС‚ РІСЂР°С‚СЊ)
+  # Divider ratios (tune them if the measured voltages are off)
   cell1_divider: "2.0"
   cell2_divider: "2.0"
   cell3_divider: "3.0"
@@ -61,7 +61,7 @@ display:
     id: oled_display
     update_interval: 1s
     lambda: |-
-      // РџРѕРєР°Р·С‹РІР°РµРј IP-Р°РґСЂРµСЃ РїРµСЂРІС‹Рµ 10 СЃРµРєСѓРЅРґ РїРѕСЃР»Рµ СЃС‚Р°СЂС‚Р° РёР»Рё РїРѕРєР° WiFi РЅРµ РїРѕРґРєР»СЋС‡РµРЅ
+      // Show the IP address for the first 10 seconds after boot or until WiFi connects
       static bool wifi_connected = false;
       static uint32_t connect_time = 0;
 
@@ -82,23 +82,23 @@ display:
         return;
       }
 
-      // Р РёСЃСѓРµРј СЂР°Р·РґРµР»РёС‚РµР»СЊРЅС‹Рµ Р»РёРЅРёРё (РєСЂРµСЃС‚)
+      // Draw the divider lines (a cross)
       it.line(64, 0, 64, 64);
       it.line(0, 32, 128, 32);
 
-      // РЇС‡РµР№РєР° 1
+      // Cell 1
       it.printf(4, 2, id(font_label), "C1");
       it.printf(4, 14, id(font_value), "%.2fV", id(cell1_v).state);
 
-      // РЇС‡РµР№РєР° 2
+      // Cell 2
       it.printf(68, 2, id(font_label), "C2");
       it.printf(68, 14, id(font_value), "%.2fV", id(cell2_v).state);
 
-      // РЇС‡РµР№РєР° 3
+      // Cell 3
       it.printf(4, 34, id(font_label), "C3");
       it.printf(4, 46, id(font_value), "%.2fV", id(cell3_v).state);
 
-      // РЇС‡РµР№РєР° 4
+      // Cell 4
       it.printf(68, 34, id(font_label), "C4");
       it.printf(68, 46, id(font_value), "%.2fV", id(cell4_v).state);
 
@@ -151,7 +151,7 @@ sensor:
           window_size: 10
           send_every: 1
 
-  # Р¤РёРЅР°Р»СЊРЅС‹Рµ СЃРµРЅСЃРѕСЂС‹ СЃ РјР°С‚РµРјР°С‚РёРєРѕР№ РІС‹С‡РёС‚Р°РЅРёСЏ Рё Р·Р°С‰РёС‚РѕР№ РѕС‚ С€СѓРјР°
+  # Final sensors with subtraction math and noise filtering
   - platform: template
     name: "Cell 1 Voltage"
     id: cell1_v

@@ -74,13 +74,13 @@ mqtt:
         - lambda: |-
             id(weather_desc) = x;
 
-# SPI РґР»СЏ РґРёСЃРїР»РµСЏ
+# SPI for the display
 spi:
   clk_pin: GPIO14
   mosi_pin: GPIO13
   miso_pin: GPIO12
 
-# Р”РёСЃРїР»РµР№ CYD
+# CYD display
 display:
   - platform: ili9xxx
     model: ili9342
@@ -97,44 +97,44 @@ display:
 
       int status = id(alert_status);
 
-      // === РЎРўРђРўРЈРЎ РўР Р•Р’РћР“Р (РћР“Р РћРњРќР«Р™) ===
+      // === ALERT STATUS (HUGE) ===
       if (status == 3) {
-        // РљР РђРЎРќРђРЇ РўР Р•Р’РћР“Рђ
+        // RED ALERT
         it.printf(160, 40, id(font_huge), Color(0xFF, 0x11, 0x11), TextAlign::CENTER, "ALERT!");
 
-        // РџСЂРёС‡РёРЅР° РєСЂР°СЃРЅС‹Рј
+        // Reason in red
         if (!id(alert_reason).empty()) {
           it.printf(160, 100, id(font_large), Color(0xFF, 0x22, 0x22), TextAlign::CENTER, "%s", id(alert_reason).c_str());
         }
 
       } else if (status == 2) {
-        // Р–РЃР›РўРђРЇ РўР Р•Р’РћР“Рђ
+        // YELLOW ALERT
         it.printf(160, 40, id(font_huge), Color(0xFF, 0xBB, 0x00), TextAlign::CENTER, "WARNING");
 
-        // РџСЂРёС‡РёРЅР° РєСЂР°СЃРЅС‹Рј
+        // Reason in red
         if (!id(alert_reason).empty()) {
           it.printf(160, 100, id(font_large), Color(0xFF, 0x22, 0x22), TextAlign::CENTER, "%s", id(alert_reason).c_str());
         }
 
       } else if (status == 1) {
-        // Р‘Р•Р—РћРџРђРЎРќРћ
+        // SAFE
         it.printf(160, 50, id(font_huge), Color(0x00, 0xFF, 0x22), TextAlign::CENTER, "SAFE");
 
       } else {
-        // РќР•Рў Р”РђРќРќР«РҐ
+        // NO DATA
         it.printf(160, 50, id(font_large), Color(0x88, 0x88, 0x88), TextAlign::CENTER, "NO DATA");
       }
 
-      // Р РµРіРёРѕРЅ РїРѕРґ СЃС‚Р°С‚СѓСЃРѕРј
+      // Region below the status
       it.printf(160, 140, id(font_medium), Color(0xBB, 0xBB, 0xBB), TextAlign::CENTER, "%s", id(alert_region).c_str());
 
-      // === РџРћР“РћР”Рђ Р’РќРР—РЈ ===
+      // === WEATHER AT THE BOTTOM ===
       if (id(cur_temp) > -50) {
         it.printf(160, 170, id(font_xlarge), Color(0xFF, 0xFF, 0xFF), TextAlign::CENTER, "%.1f C", id(cur_temp));
         it.printf(160, 210, id(font_small), Color(0x99, 0x99, 0x99), TextAlign::CENTER, "%d%%  %s", id(cur_hum), id(weather_desc).c_str());
       }
 
-# РџРѕРґСЃРІРµС‚РєР°
+# Backlight
 output:
   - platform: ledc
     pin: GPIO21
@@ -152,7 +152,7 @@ light:
           id: backlight
           brightness: 100%
 
-# РЁСЂРёС„С‚С‹ (РљР РЈРџРќР«Р• РґР»СЏ РІРёРґРёРјРѕСЃС‚Рё РёР·РґР°Р»РµРєР°)
+# Fonts (LARGE so they are readable from afar)
 font:
   - file:
       type: gfonts
@@ -176,7 +176,7 @@ font:
       weight: 700
     id: font_large
     size: 28
-    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇР°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏР†С–Р‡С—Р„С”ТђТ‘"
+    glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюяІіЇїЄєҐґ"
 
   - file:
       type: gfonts
@@ -194,7 +194,7 @@ font:
     size: 16
     glyphs: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:;!?()-%+ "
 
-# Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ
+# Globals
 globals:
   - id: alert_status
     type: int
@@ -213,7 +213,7 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # РџРѕРіРѕРґР°
+  # Weather
   - id: cur_temp
     type: float
     restore_value: no
@@ -227,7 +227,7 @@ globals:
     restore_value: no
     initial_value: '"..."'
 
-# РЎРµРЅСЃРѕСЂС‹
+# Sensors
 binary_sensor:
   - platform: status
     name: "Status"

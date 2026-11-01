@@ -1,4 +1,4 @@
-# ESP32-C6 + 4INA219 + MQTT Р±Р°Р·РѕРІС‹Р№ СЂР°Р±РѕС‡РёР№ РєРѕРЅС„РёРі
+# ESP32-C6 + 4INA219 + MQTT base working config
 
 esphome:
   name: bms-monitor-esp32c6
