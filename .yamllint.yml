@@ -1,0 +1,18 @@
+# Lint with: yamllint esphome/
+extends: default
+
+rules:
+  line-length:
+    max: 140
+    level: warning
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false", "on", "off", "yes", "no"]
+  comments:
+    min-spaces-from-content: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+# ESPHome custom tags (!secret, !lambda, !include) are valid YAML tags
+# and are accepted by yamllint without extra configuration.
